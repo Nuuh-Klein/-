@@ -15,6 +15,10 @@
 
 //定时器参数分配
 
+//密码存储参数分配
+#define Store_Start_Address 0x0800FC00     //存放密码的flash地址
+#define Store_Data_Length   12             //存放密码的数组长度
+
 //共享变量声明
 extern volatile uint16_t current_state;          //状态机目前的状态
 extern volatile uint16_t error_count;            //输入错误的次数

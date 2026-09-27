@@ -274,7 +274,7 @@
               <OCR_RVCT4>
                 <Type>1</Type>
                 <StartAddress>0x8000000</StartAddress>
-                <Size>0x10000</Size>
+                <Size>0xfc000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
                 <Type>1</Type>
@@ -779,6 +779,16 @@
               <FileName>buzzer.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\hardware\buzzer.h</FilePath>
+            </File>
+            <File>
+              <FileName>store.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\store.c</FilePath>
+            </File>
+            <File>
+              <FileName>store.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\store.h</FilePath>
             </File>
           </Files>
         </Group>

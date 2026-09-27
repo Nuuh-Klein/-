@@ -2,6 +2,14 @@
 #include "Delay.h"
 #include "OLED.h"
 #include "config.h"
+#include "store.h"
+#include "buzzer.h"
+#include "motor.h"
+#include "encoder.h"
+#include "led.h"
+#include "key.h"
+#include "AS608.h"
+
 
 typedef enum{
 	STATE_IDLE,    //待机状态
