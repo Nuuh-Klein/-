@@ -24,3 +24,15 @@ void FLASH_EraseAPage(uint32_t PageAddress){
 	FLASH_ErasePage(PageAddress);
 	FLASH_Lock();
 }
+
+void FLASH_WriteWord(uint32_t Address,uint32_t Data){
+	FLASH_Unlock();
+	FLASH_ProgramWord(Address,Data);
+	FLASH_Lock();//иокЬ
+}
+
+void FLASH_WriteHalfWord(uint32_t Address,uint16_t Data){
+	FLASH_Unlock();
+	FLASH_ProgramWord(Address,Data);
+	FLASH_Lock();//иокЬ
+}
