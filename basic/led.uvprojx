@@ -781,11 +781,6 @@
               <FilePath>.\hardware\buzzer.h</FilePath>
             </File>
             <File>
-              <FileName>store.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\hardware\store.c</FilePath>
-            </File>
-            <File>
               <FileName>store.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\hardware\store.h</FilePath>

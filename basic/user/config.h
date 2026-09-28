@@ -1,14 +1,18 @@
-#ifndef __CONFIG.H
-#define __CONFIG.H
-#include "stm32f10x.h"                  // Device header
+#ifndef __CONFIG.H 
+#define __CONFIG.H  
 
+#include "stm32f10x.h"                  // Device header
 //密码参数
 #define PASSWORD_LEN 6        //密码长度为6位
 #define MAX_ERROR_COUNT 3     //最长错误次数3次
 #define LOCKING_TIME 30       //锁定时长为30秒
 
 //LED参数分配（端口/引脚）
-
+#define LED_RCC_PORT RCC_APB2Periph_GPIOC
+#define LED_PORT GPIOC
+#define LED_Green_Pin GPIO_Pin_15
+#define LED_Red_PORT GPIOC
+#define LED_Red_Pin GPIO_Pin_1
 
 //蜂鸣器参数分配
 
