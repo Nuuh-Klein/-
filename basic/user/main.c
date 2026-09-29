@@ -23,7 +23,9 @@ int main(){
 	//硬件初始化部分
 	OLED_Init();
 	LED_Init();
-	
+	Buzzer_Init();
+	PWM_Init();
+	Store_Init();
 	
 	//初始化共享变量部分
 	volatile uint16_t current_state=STATE_IDLE;

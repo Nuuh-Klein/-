@@ -2,26 +2,55 @@
 #define __CONFIG_H  
 
 #include "stm32f10x.h"                  // Device header
+
 //密码参数
 #define PASSWORD_LEN 6        //密码长度为6位
 #define MAX_ERROR_COUNT 3     //最长错误次数3次
 #define LOCKING_TIME 30       //锁定时长为30秒
 
 //LED参数分配（端口/引脚）
-#define LED_RCC_PORT RCC_APB2Periph_GPIOC
-#define LED_PORT GPIOC
-#define LED_Green_Pin GPIO_Pin_15
-#define LED_Red_PORT GPIOC
-#define LED_Red_Pin GPIO_Pin_1
+#define LED_RCC_PORT         RCC_APB2Periph_GPIOC
+#define LED_PORT             GPIOC
+#define LED_Green_Pin        GPIO_Pin_15
+#define LED_Red_PORT         GPIOC
+#define LED_Red_Pin          GPIO_Pin_1
 
 //蜂鸣器参数分配
+#define BUZZER_GPIO_PORT   GPIOB
+#define BUZZER_GPIO_PIN    GPIO_Pin_13
+#define BUZZER_GPIO_CLK    RCC_APB2Periph_GPIOB
 
+#define BUZZER_BEEP_MS     50   
+#define BUZZER_PAUSE_MS    50    
+#define BUZZER_ALARM_TIMES 20    
 
 //定时器参数分配
 
+
+//发动机参数分配
+#define PWM_TIM                 TIM2
+#define PWM_TIM_CLK             RCC_APB1Periph_TIM2
+
+#define PWM_TIM_CHANNEL         TIM_Channel_1 
+
+#define PWM_GPIO_PORT           GPIOA
+#define PWM_GPIO_PIN            GPIO_Pin_15
+#define PWM_GPIO_CLK            RCC_APB2Periph_GPIOA
+ 
+#define PWM_AFIO_CLK            RCC_APB2Periph_AFIO
+#define PWM_REMAP_PIN           GPIO_PartialRemap1_TIM2
+
+#define PWM_TIM_PRESCALER       (72 - 1)        // PSC
+#define PWM_TIM_PERIOD          (20000 - 1)     // ARR
+
+#define PWM_PULSE_0_DEG         500//close
+#define PWM_PULSE_90_DEG        1500//open
+
+
+
 //密码存储参数分配
-#define Store_Start_Address 0x0800FC00     //存放密码的flash地址
-#define Store_Data_Length   12             //存放密码的数组长度
+#define Store_Start_Address   0x0800FC00     //存放密码的flash地址
+#define Store_Data_Length     12             //存放密码的数组长度
 
 //共享变量声明
 extern volatile uint16_t current_state;          //状态机目前的状态
