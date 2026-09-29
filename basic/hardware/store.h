@@ -1,5 +1,5 @@
-#ifndef __STORE.H
-#define __STORE.H
+#ifndef __STORE_H
+#define __STORE_H
 
 extern uint16_t Store_Data[];
 

@@ -22,6 +22,7 @@ typedef enum{
 int main(){
 	//硬件初始化部分
 	OLED_Init();
+	LED_Init();
 	
 	
 	//初始化共享变量部分
@@ -37,13 +38,16 @@ int main(){
 			case STATE_IDLE:{
 				if(error_count==3){
 					//蜂鸣器响
-					error_count=3;
+					
+					error_count=0;//错误计次归零
 					locking_remain=LOCKING_TIME;
+					
 					OLED_ShowString(1,1,"WARING!!!");
 					OLED_ShowString(2,1,"waiting:");
-					OLED_ShowNum(2,9,locking_remain,2);
+					
 					while(locking_remain){
-						//等待
+						//等待倒计时结束
+						OLED_ShowNum(2,9,locking_remain,2);
 					}
 				}
 				OLED_ShowString(1,1,"press to start");

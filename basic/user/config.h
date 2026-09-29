@@ -1,5 +1,5 @@
-#ifndef __CONFIG.H 
-#define __CONFIG.H  
+#ifndef __CONFIG_H 
+#define __CONFIG_H  
 
 #include "stm32f10x.h"                  // Device header
 //密码参数

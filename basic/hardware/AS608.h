@@ -1,5 +1,5 @@
-#ifndef __AS608.H
-#define __AS608.H
+#ifndef __AS608_H
+#define __AS608_H
 
 
 

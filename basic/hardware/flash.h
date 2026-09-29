@@ -1,5 +1,5 @@
-#ifndef __FLASH.H
-#define __FLASH.H
+#ifndef __FLASH_H
+#define __FLASH_H
 uint32_t FLASH_ReadWord(uint32_t Address);
 
 uint16_t FLASH_ReadHalfWord(uint32_t Address);
