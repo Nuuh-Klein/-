@@ -3,13 +3,13 @@
 #include "OLED.h"
 #include "config.h"
 #include "store.h"
+#include "log.h"
 #include "buzzer.h"
 #include "motor.h"
 #include "encoder.h"
 #include "led.h"
 #include "key.h"
 #include "AS608.h"
-
 
 typedef enum{
 	STATE_IDLE,    //待机状态
@@ -26,6 +26,7 @@ int main(){
 	Buzzer_Init();
 	PWM_Init();
 	Store_Init();
+	Log_Init();
 	
 	//初始化共享变量部分
 	volatile uint16_t current_state=STATE_IDLE;           
@@ -62,14 +63,20 @@ int main(){
 				break;
 			}
 			case STATE_VERIFY:{
+				uint8_t pass=1;                 //先假定校验通过
 				for(int i=0;i<6;i++){
 					if(origin_password[i]!=set_password[i]){
+						pass=0;                     //任意一位不匹配即失败
 						current_state=STATE_IDLE;
 						error_count++;
 						break;//密码输入错误
 					}
 				}
-				//密码通过，触发电机，开锁
+				//无论成功还是失败，都记入开锁审计日志（创意四）
+				Log_Write(LOG_METHOD_PASSWORD, pass ? LOG_RESULT_PASS : LOG_RESULT_FAIL);
+				if(pass){
+					//密码通过，触发电机，开锁（TODO：调用 PWM_open() 完成开锁）
+				}
 				break;
 			}
 			case STATE_LOCKED:{

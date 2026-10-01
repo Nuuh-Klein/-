@@ -51,8 +51,15 @@
 
 
 //密码存储参数分配
-#define Store_Start_Address   0x0800FC00     //存放密码的flash地址
+#define Store_Start_Address   0x0800FC00     //存放密码的flash地址（第63页）
 #define Store_Data_Length     12             //存放密码的数组长度
+
+//审计日志存储参数分配（创意四：开锁审计日志）
+#define LOG_START_ADDRESS   0x0800F400                                        //日志区起始地址（第61页）
+#define LOG_PAGE_SIZE       1024                                              //每页1KB
+#define LOG_PAGE_COUNT      2                                                 //日志区占用2页，共2KB
+#define LOG_RECORD_SIZE     6                                                 //每条日志定长6字节=3个半字{方式,成败,序号}
+#define LOG_MAX_RECORDS     ((LOG_PAGE_SIZE*LOG_PAGE_COUNT)/LOG_RECORD_SIZE)  //1024*2/6==最多341条（末尾2字节不用）
 
 //共享变量声明
 extern volatile uint16_t current_state;          //状态机目前的状态
