@@ -28,11 +28,12 @@ int main(){
 	Store_Init();
 	
 	//初始化共享变量部分
-	volatile uint16_t current_state=STATE_IDLE;
+	volatile uint16_t current_state=STATE_IDLE;           
 	volatile uint16_t error_count=0;
 	volatile int locking_remain=30;
 	volatile uint16_t origin_password[6]={0};
 	volatile uint16_t set_password[6]={1,1,1,1,1,1};
+	volatile uint16_t duress_password[6]={1,2,3,4,5,6};
 	
 	
 	while(1){
