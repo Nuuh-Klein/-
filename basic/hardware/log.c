@@ -91,3 +91,18 @@ uint8_t Log_Read(uint16_t recent_index, Log_Record_t *record){
 	record->serial = Log_ReadSerialAt(slot);
 	return 1;
 }
+
+/* ---- 数字 → 显示字符串（供 OLED 显示，ASCII 字库） ---- */
+char* Log_MethodStr(uint16_t method){
+	switch(method){
+		case LOG_METHOD_PASSWORD: return "PWD";
+		case LOG_METHOD_PATTERN:  return "PTN";
+		case LOG_METHOD_FINGER:   return "FINGER";
+		case LOG_METHOD_DURESS:   return "DURESS";
+		default:                  return "???";
+	}
+}
+
+char* Log_ResultStr(uint16_t result){
+	return (result == LOG_RESULT_PASS) ? "PASS" : "FAIL";
+}

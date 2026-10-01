@@ -65,8 +65,9 @@
 extern volatile uint16_t current_state;          //状态机目前的状态
 extern volatile uint16_t error_count;            //输入错误的次数
 extern volatile int locking_remain;              //锁定剩余的时长
-extern volatile uint16_t origin_password[6];     //初始密码
+extern volatile uint16_t input_password[6];      //输入缓冲密码
 extern volatile uint16_t set_password[6];        //设置密码
 extern volatile uint16_t duress_password[6];     //胁迫密码
+extern volatile uint16_t duress_flag;            //胁迫标记：置位=曾输入胁迫密码，下次正常开锁后提示并清零
 
 #endif

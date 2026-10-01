@@ -38,4 +38,8 @@ void     Log_Write(uint16_t method, uint16_t result);           // 追加一条�
 uint16_t Log_GetCount(void);                                    // 返回当前有效日志条数
 uint8_t  Log_Read(uint16_t recent_index, Log_Record_t *record); // 读“第 recent_index 新”的一条（0=最新）
 
+/* ---- 数字 → 显示字符串（供 OLED 显示，ASCII 字库） ---- */
+char* Log_MethodStr(uint16_t method);   // 方式码 → 短字符串，如 "PWD"/"DURESS"
+char* Log_ResultStr(uint16_t result);   // 结果码 → "PASS"/"FAIL"
+
 #endif
