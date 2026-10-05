@@ -36,59 +36,9 @@ int main(){
 	volatile uint16_t set_password[6]={1,1,1,1,1,1};
 	volatile uint16_t duress_password[6]={1,2,3,4,5,6};
 	
-	
+	buzzer2();
 	while(1){
-		switch(current_state){
-			case STATE_IDLE:{
-				if(error_count==3){
-					//蜂鸣器响
-					
-					error_count=0;//错误计次归零
-					locking_remain=LOCKING_TIME;
-					
-					OLED_ShowString(1,1,"WARING!!!");
-					OLED_ShowString(2,1,"waiting:");
-					
-					while(locking_remain){
-						//等待倒计时结束
-						OLED_ShowNum(2,9,locking_remain,2);
-					}
-				}
-				OLED_ShowString(1,1,"press to start");
-				//
-				break;
-			}
-			case STATE_INPUT:{
-				//
-				break;
-			}
-			case STATE_VERIFY:{
-				uint8_t pass=1;                 //先假定校验通过
-				for(int i=0;i<6;i++){
-					if(origin_password[i]!=set_password[i]){
-						pass=0;                     //任意一位不匹配即失败
-						current_state=STATE_IDLE;
-						error_count++;
-						break;//密码输入错误
-					}
-				}
-				//无论成功还是失败，都记入开锁审计日志（创意四）
-				Log_Write(LOG_METHOD_PASSWORD, pass ? LOG_RESULT_PASS : LOG_RESULT_FAIL);
-				if(pass){
-					//密码通过，触发电机，开锁（TODO：调用 PWM_open() 完成开锁）
-				}
-				break;
-			}
-			case STATE_LOCKED:{
-				if(locking_remain==0){
-					current_state=STATE_IDLE;
-				}
-				break;
-			}
-			case STATE_ADMIN:{
-				OLED_ShowString(1,1,"ADMIN:");
-				break;
-			}
-		}
+		
+   
 	}
 }
