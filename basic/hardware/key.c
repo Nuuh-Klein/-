@@ -1,7 +1,8 @@
 #include "stm32f10x.h"                  // Device header
 #include "key.h"
 #include "delay.h"
-
+#include "Delay.h"
+#include "OLED.h"
 //全局变量
 uint8_t InputBuf[PWD_MAX_LEN] = {0};
 uint8_t SavedPwd[PWD_MAX_LEN] = {0};
@@ -61,7 +62,7 @@ uint8_t KEY_Scan(void)
 	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C3_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C3_PIN));Delay_ms(20); key=9;}
 	GPIO_SetBits(KEY_ROW_PORT, R3_PIN);
 
-	//扫描R4(PA3)  * 0 # D
+	//扫描R4(PA3)  * 0 清空 确认
 	GPIO_ResetBits(KEY_ROW_PORT, R4_PIN);
 	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C1_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C1_PIN));Delay_ms(20); key=11;} // *清空
 	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C2_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C2_PIN));Delay_ms(20); key=0;}  //数字0
@@ -118,6 +119,24 @@ void Pwd_Input_Process(uint8_t key)
 		if(InputCnt == PWD_MAX_LEN) //必须刚好6位才保存
 		{
 			Pwd_Save();
+		}
+	}
+}
+
+void Pwd_PrintInputToOLED(void)    //每输入 1 位，屏幕显示一个`*`，看不到真实数字
+{
+	uint8_t i;
+	OLED_Clear();
+	OLED_ShowString(0,0,"Input Pwd:");
+	for(i = 0; i < 6; i++)
+	{
+		if(i < InputCnt)
+		{
+			OLED_ShowChar(8 + i*12, 24, '*');
+		}
+		else
+		{
+			OLED_ShowChar(8 + i*12, 24, ' ');
 		}
 	}
 }
