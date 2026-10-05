@@ -12,10 +12,10 @@
 
 //LED参数分配（端口/引脚）
 #define LED_RCC_PORT         RCC_APB2Periph_GPIOC
-#define LED_PORT             GPIOC
-#define LED_Green_Pin        GPIO_Pin_15
+#define LED_Green_PORT       GPIOC
+#define LED_Green_Pin        GPIO_Pin_14
 #define LED_Red_PORT         GPIOC
-#define LED_Red_Pin          GPIO_Pin_1
+#define LED_Red_Pin          GPIO_Pin_15
 
 //蜂鸣器参数分配
 #define BUZZER_GPIO_PORT   GPIOB
