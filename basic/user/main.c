@@ -32,7 +32,7 @@ int main(){
     volatile int locking_remain=30;
     volatile uint16_t origin_password[6]={0};
     volatile uint16_t set_password[6]={1,1,1,1,1,1};
-    volatile uint16_t duress_password[6]={1,2,3,4,5,6};
+    volatile uint16_t duress_password[6]={01,2,3,4,5,6};
     
     
     while(1){
