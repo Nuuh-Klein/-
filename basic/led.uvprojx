@@ -790,16 +790,6 @@
               <FileType>5</FileType>
               <FilePath>.\hardware\store.h</FilePath>
             </File>
-            <File>
-              <FileName>log.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\hardware\log.c</FilePath>
-            </File>
-            <File>
-              <FileName>log.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\hardware\log.h</FilePath>
-            </File>
           </Files>
         </Group>
       </Groups>

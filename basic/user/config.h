@@ -7,15 +7,55 @@
 #define PASSWORD_LEN 6        //密码长度为6位
 #define MAX_ERROR_COUNT 3     //最长错误次数3次
 #define LOCKING_TIME 30       //锁定时长为30秒
+//4*4矩阵键盘引脚宏定义 PA0~PA7
+#define KEY_ROW_RCC		RCC_APB2Periph_GPIOA //行 R1 R2 R3 R4 PA0~PA3 【推挽输出】
+#define KEY_ROW_PORT	GPIOA
+#define R1_PIN			GPIO_Pin_0
+#define R2_PIN			GPIO_Pin_1
+#define R3_PIN			GPIO_Pin_2
+#define R4_PIN			GPIO_Pin_3
 
+#define KEY_COL_RCC		RCC_APB2Periph_GPIOA //列 C1 C2 C3 C4 PA4~PA7 【上拉输入】
+#define KEY_COL_PORT	GPIOA
+#define C1_PIN			GPIO_Pin_4
+#define C2_PIN			GPIO_Pin_5
+#define C3_PIN			GPIO_Pin_6
+#define C4_PIN			GPIO_Pin_7
+#define PWD_MAX_LEN	    6	//密码长度固定6位
 
 
 //LED参数分配（端口/引脚）
-#define LED_RCC_PORT         RCC_APB2Periph_GPIOC
-#define LED_Green_PORT       GPIOC
-#define LED_Green_Pin        GPIO_Pin_14
-#define LED_Red_PORT         GPIOC
-#define LED_Red_Pin          GPIO_Pin_15
+#define LED_RCC_PORT        RCC_APB2Periph_GPIOC
+#define LED_PORT            GPIOC
+#define LED_Green_Pin       GPIO_Pin_15
+#define LED_Red_PORT        GPIOC
+#define LED_Red_Pin         GPIO_Pin_14
+
+//编码器参数分配
+#define ENCODER_RCC_PORT    RCC_APB2Periph_GPIOB
+#define ENCODER_PORT        GPIOB
+#define ENCODER_Pin_CH1     GPIO_Pin_0
+#define ENCODER_Pin_CH2     GPIO_Pin_1
+
+//AFIO映射宏（给GPIO_EXTILineConfig专用）
+#define ENCODER_PORTSOURCE      GPIO_PortSourceGPIOB    //AFIO端口源
+#define ENCODER_PINSOURCE_CH1   GPIO_PinSource0         //AFIO引脚源 CH1 PB0
+#define ENCODER_PINSOURCE_CH2   GPIO_PinSource1         //AFIO引脚源 CH2 PB1
+
+//EXTI中断线
+#define ENCODER_EXTI_LINE_CH1   EXTI_Line0
+#define ENCODER_EXTI_LINE_CH2   EXTI_Line1
+//编码器旋钮按键
+#define ENC_KEY_PORT			GPIOB
+#define ENC_KEY_RCC_PORT		RCC_APB2Periph_GPIOB
+#define ENC_KEY_PIN				GPIO_Pin_10
+#define ENC_KEY_PORTSOURCE		GPIO_PortSourceGPIOB
+#define ENC_KEY_PINSOURCE		GPIO_PinSource10
+#define ENC_KEY_EXTI_LINE		EXTI_Line10
+#define ENC_KEY_IRQn			EXTI15_10_IRQn
+
+//AFIO时钟
+#define ENCODER_AFIO_RCC        RCC_APB2Periph_AFIO
 
 //蜂鸣器参数分配
 #define BUZZER_GPIO_PORT   GPIOB
@@ -47,7 +87,6 @@
 
 #define PWM_PULSE_0_DEG         500             //close
 #define PWM_PULSE_90_DEG        1500            //open
-
 
 
 //密码存储参数分配

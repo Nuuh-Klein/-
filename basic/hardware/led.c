@@ -3,8 +3,8 @@
 #include "config.h"
 void LED_Alloff(void)
 {
-void LED_Green_Off();
-void LED_Red_Off();
+LED_Green_Off();
+LED_Red_Off();
 }
 void LED_Init(void)
 {
