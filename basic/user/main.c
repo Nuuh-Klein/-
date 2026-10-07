@@ -26,6 +26,7 @@ int main(){
     Buzzer_Init();
     PWM_Init();
     Store_Init();
+	  Encoder_Init();
     //初始化共享变量部分
     volatile uint16_t current_state=STATE_IDLE;           
     volatile uint16_t error_count=0;
