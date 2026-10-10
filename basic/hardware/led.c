@@ -3,8 +3,8 @@
 #include "config.h"
 void LED_Alloff(void)
 {
-void LED_Green_Off();
-void LED_Red_Off();
+LED_Green_Off();
+LED_Red_Off();
 }
 void LED_Init(void)
 {
@@ -14,22 +14,22 @@ void LED_Init(void)
 	GPIO_InitStructure.GPIO_Mode=GPIO_Mode_Out_PP;
 	GPIO_InitStructure.GPIO_Pin=LED_Green_Pin|LED_Red_Pin;
 	GPIO_InitStructure.GPIO_Speed=GPIO_Speed_50MHz;
-	GPIO_Init(LED_PORT,&GPIO_InitStructure);
+	GPIO_Init(LED_Green_PORT,&GPIO_InitStructure);
 	LED_Alloff();
 }
 void LED_Green_On(void)
 {
-	GPIO_ResetBits(LED_PORT,LED_Green_Pin);
+	GPIO_ResetBits(LED_Green_PORT,LED_Green_Pin);
 	}
 void LED_Green_Off(void)
 {
-	GPIO_SetBits(LED_PORT,LED_Green_Pin);
+	GPIO_SetBits(LED_Green_PORT,LED_Green_Pin);
 	}
 void LED_Red_On(void)
 {
-	GPIO_ResetBits(LED_PORT,LED_Red_Pin);
+	GPIO_ResetBits(LED_Red_PORT,LED_Red_Pin);
 	}
 void LED_Red_Off(void)
 {
-	GPIO_SetBits(LED_PORT,LED_Red_Pin);
+	GPIO_SetBits(LED_Red_PORT,LED_Red_Pin);
 	}

@@ -18,33 +18,75 @@ void KEY_Test_Init(void)
 	GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
 
-uint8_t ScanKey(void)
-{
-	uint8_t key=0;
-	GPIO_ResetBits(GPIOA,GPIO_Pin_0);
-	if(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_4)==0)
-	{
-		Delay_ms(20);
-		while(!GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_4));
-		key=1;
-	}
-	GPIO_SetBits(GPIOA,GPIO_Pin_0);
-	return key;
-}
-
-int main(void)
-{
-	uint8_t k;
-	OLED_Init();
-	KEY_Test_Init();
-	OLED_Clear();
-	while(1)
-	{
-		k = ScanKey();
-		if(k != 0)
-		{
-			OLED_Clear();
-			OLED_ShowString(0,0,"KEY PRESSED");
-		}
-	}
+int main(){
+    //硬件初始化部分
+    OLED_Init();
+    LED_Init();
+    Buzzer_Init();
+    PWM_Init();
+    Store_Init();
+	  Encoder_Init();
+    //初始化共享变量部分
+    volatile uint16_t current_state=STATE_IDLE;           
+    volatile uint16_t error_count=0;
+    volatile int locking_remain=30;
+    volatile uint16_t origin_password[6]={0};
+    volatile uint16_t set_password[6]={1,1,1,1,1,1};
+    volatile uint16_t duress_password[6]={01,2,3,4,5,6};
+    
+    
+    while(1){
+        switch(current_state){
+            case STATE_IDLE:{
+                if(error_count==3){
+                    //蜂鸣器响
+                    
+                    error_count=0;//错误计次归零
+                    locking_remain=LOCKING_TIME;
+                    
+                    OLED_ShowString(1,1,"WARING!!!");
+                    OLED_ShowString(2,1,"waiting:");
+                    
+                    while(locking_remain){
+                        //等待倒计时结束
+                        OLED_ShowNum(2,9,locking_remain,2);
+                    }
+                }
+                OLED_ShowString(1,1,"press to start");
+                //
+                break;
+            }
+            case STATE_INPUT:{
+                //
+                break;
+            }
+            case STATE_VERIFY:{
+                uint8_t pass=1;                 //先假定校验通过
+                for(int i=0;i<6;i++){
+                    if(origin_password[i]!=set_password[i]){
+                        pass=0;                     //任意一位不匹配即失败
+                        current_state=STATE_IDLE;
+                        error_count++;
+                        break;//密码输入错误
+                    }
+                }
+                //无论成功还是失败，都记入开锁审计日志（创意四）
+                
+                if(pass){
+                    //密码通过，触发电机，开锁（TODO：调用 PWM_open() 完成开锁）
+                }
+                break;
+            }
+            case STATE_LOCKED:{
+                if(locking_remain==0){
+                    current_state=STATE_IDLE;
+                }
+                break;
+            }
+            case STATE_ADMIN:{
+                OLED_ShowString(1,1,"ADMIN:");
+                break;
+            }
+        }
+    }
 }
