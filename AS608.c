@@ -83,21 +83,14 @@ void AS608_SendCmd(uint8_t cmd, uint8_t *param, uint8_t param_len)
 /* as608接受stm的指令返回接受码，超时返回 0xFF
  * 普通应答共十二字节，确认码在AS608_RxBuffer[9]
  */
-uint8_t AS608_ReceiveAck(uint32_t timeout)   //输入延时信号
+uint8_t AS608_ReceiveAck(uint32_t timeout)
 {
     uint8_t i;
     uint32_t t;
+    uint16_t len;
 
-    /* 等待接受第一个信号 0xEF */
-    t = timeout;
-    while (USART_GetFlagStatus(AS608_USART, USART_FLAG_RXNE) == RESET) {
-        if (t-- == 0) return 0xFF;  //如果超时了就自动报错
-    }
-    AS608_RxBuffer[0] = USART_ReceiveData(AS608_USART);
-    if (AS608_RxBuffer[0] != 0xEF) return 0xFF;  
-
-    /*接收剩余的11个信号*/
-    for (i = 1; i < 12; i++) {
+    /* ??? 9 ??:EF 01 FF FF FF FF ??? ??H ??L */
+    for (i = 0; i < 9; i++) {
         t = timeout;
         while (USART_GetFlagStatus(AS608_USART, USART_FLAG_RXNE) == RESET) {
             if (t-- == 0) return 0xFF;
@@ -105,7 +98,22 @@ uint8_t AS608_ReceiveAck(uint32_t timeout)   //输入延时信号
         AS608_RxBuffer[i] = USART_ReceiveData(AS608_USART);
     }
 
-    return AS608_RxBuffer[9];   //返回确认码，返回0x00就代表成功，其他都是失败
+    if (AS608_RxBuffer[0] != 0xEF || AS608_RxBuffer[1] != 0x01) {
+        return 0xFF;
+    }
+
+    len = ((uint16_t)AS608_RxBuffer[7] << 8) | AS608_RxBuffer[8];
+    if (len > sizeof(AS608_RxBuffer) - 9) return 0xFF;
+
+    for (i = 0; i < len; i++) {
+        t = timeout;
+        while (USART_GetFlagStatus(AS608_USART, USART_FLAG_RXNE) == RESET) {
+            if (t-- == 0) return 0xFF;
+        }
+        AS608_RxBuffer[9 + i] = USART_ReceiveData(AS608_USART);
+    }
+
+    return AS608_RxBuffer[9];
 }
 
 /* 录入指纹到指定id（uint16_t id）
@@ -156,7 +164,7 @@ uint8_t Finger_Search(uint16_t *match_id, uint16_t *match_score)
 {
     uint8_t ack;
     uint8_t p1 = 0x01;
-    uint8_t search[5] = {0x01, 0x00, 0x00, 0x03, 0xE8};  // ???1, ?0??, ?1000?
+    uint8_t search[5] = {0x01, 0x00, 0x00, 0x03, 0xE8};  
 
     /*采集图像*/
     AS608_SendCmd(0x01, 0, 0);

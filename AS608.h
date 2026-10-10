@@ -22,8 +22,8 @@ void AS608_SendCmd(uint8_t cmd, uint8_t *param, uint8_t param_len);
 uint8_t AS608_ReceiveAck(uint32_t timeout);
 
 /*指纹操作 */
-
+uint8_t Finger_Search(uint16_t *match_id, uint16_t *match_score);
 uint8_t AS608_Enroll(uint16_t id);                    // 录入指纹
-uint8_t AS608_DeleteChar(uint16_t id);                // 删除指纹
+uint8_t Finger_Delete(uint16_t id);              // 删除指纹
 
 #endif
