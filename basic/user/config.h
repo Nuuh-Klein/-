@@ -10,10 +10,10 @@
 //4*4矩阵键盘引脚宏定义 PA0~PA7
 #define KEY_ROW_RCC		RCC_APB2Periph_GPIOA //行 R1 R2 R3 R4 PA0~PA3 【推挽输出】
 #define KEY_ROW_PORT	GPIOA
-#define R1_PIN			GPIO_Pin_0
-#define R2_PIN			GPIO_Pin_1
-#define R3_PIN			GPIO_Pin_2
-#define R4_PIN			GPIO_Pin_3
+#define R1_PIN			GPIO_Pin_3
+#define R2_PIN			GPIO_Pin_2
+#define R3_PIN			GPIO_Pin_1
+#define R4_PIN			GPIO_Pin_0
 
 #define KEY_COL_RCC		RCC_APB2Periph_GPIOA //列 C1 C2 C3 C4 PA4~PA7 【上拉输入】
 #define KEY_COL_PORT	GPIOA
@@ -26,7 +26,7 @@
 
 //LED参数分配（端口/引脚）
 #define LED_RCC_PORT        RCC_APB2Periph_GPIOC
-#define LED_Green_PORT      GPIOC
+#define LED_Green_PORT            GPIOC
 #define LED_Green_Pin       GPIO_Pin_15
 #define LED_Red_PORT        GPIOC
 #define LED_Red_Pin         GPIO_Pin_14
