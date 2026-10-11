@@ -66,8 +66,6 @@
 #define BUZZER_PAUSE_MS    50    
 #define BUZZER_ALARM_TIMES 20    
 
-//定时器参数分配
-
 
 //发动机参数分配
 #define PWM_TIM                 TIM2
@@ -88,7 +86,13 @@
 #define PWM_PULSE_0_DEG         500             //close
 #define PWM_PULSE_90_DEG        1500            //open
 
-//
+//AS608参数分配
+#define AS608_USART            USART2
+#define AS608_BAUDRATE         57600
+#define AS608_PACKET_TYPE_CMD  0x01
+#define AS608_PACKET_TYPE_ACK  0x07
+#define AS608_RX_BUFFER_SIZE   32
+#define AS608_DEFAULT_TIMEOUT  1500U /* milliseconds, per received byte */
 
 //密码存储参数分配
 #define Store_Start_Address   0x0800FC00     //存放密码的flash地址（第63页）

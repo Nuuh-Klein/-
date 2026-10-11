@@ -4,13 +4,9 @@
 #include "stm32f10x_usart.h"
 #include "AS608.h"
 #include "Delay.h"
+#include "config.h"
 
-#define AS608_USART            USART2
-#define AS608_BAUDRATE         57600
-#define AS608_PACKET_TYPE_CMD 0x01
-#define AS608_PACKET_TYPE_ACK 0x07
-#define AS608_RX_BUFFER_SIZE  32
-#define AS608_DEFAULT_TIMEOUT 1500U /* milliseconds, per received byte */
+
 
 uint8_t AS608_RxBuffer[AS608_RX_BUFFER_SIZE];
 uint8_t AS608_LastCommand;

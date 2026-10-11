@@ -2,8 +2,9 @@
 #define __AS608_H
 #include "stm32f10x.h"
 #include <stdint.h>
+#include "config.h"
 
-/* 这些是指令码，他们都是固定的，不需要宏定义*/
+//指令码
 #define AS608_OK            0x00   // 成功
 #define AS608_ERR_RECV      0x01   // 收包错误
 #define AS608_ERR_NO_FINGER 0x02   // 无手指
@@ -15,7 +16,7 @@
 
 #define AS608_ENROLL_WAIT_FIRST   1
 #define AS608_ENROLL_WAIT_REMOVE  2
-#define AS608_ENROLL_WAIT_SECOND 3
+#define AS608_ENROLL_WAIT_SECOND  3
 #define AS608_ENROLL_MERGE        4
 #define AS608_ENROLL_STORE        5
 
