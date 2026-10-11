@@ -1,6 +1,6 @@
 #include "stm32f10x.h"                  // Device header
 #include "config.h"
-void PWM_Init(void) //��ʼ��  
+void PWM_Init(void) // 初始化舵机 PWM，默认输出关闭位置脉宽。
 {
     RCC_APB1PeriphClockCmd(PWM_TIM_CLK, ENABLE);
     RCC_APB2PeriphClockCmd(PWM_GPIO_CLK, ENABLE);
@@ -38,12 +38,12 @@ void PWM_Init(void) //��ʼ��
     TIM_Cmd(PWM_TIM, ENABLE);
 }
 
-void PWM_close(void)   // 0��
+void PWM_close(void)   // 设置舵机到关闭位置（约 0 度）。
 {
     TIM_SetCompare1(PWM_TIM, PWM_PULSE_0_DEG);
 }
 
-void PWM_open(void)    // 90��
+void PWM_open(void)    // 设置舵机到开启位置（约 90 度）。
 {
     TIM_SetCompare1(PWM_TIM, PWM_PULSE_90_DEG);
 }

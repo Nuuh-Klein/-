@@ -7,15 +7,15 @@
 #define PASSWORD_LEN 6        //密码长度为6位
 #define MAX_ERROR_COUNT 3     //最长错误次数3次
 #define LOCKING_TIME 30       //锁定时长为30秒
-//4*4矩阵键盘引脚宏定义 PA0~PA7
-#define KEY_ROW_RCC		RCC_APB2Periph_GPIOA //行 R1 R2 R3 R4 PA0~PA3 【推挽输出】
+// 4×4 矩阵键盘引脚：行线 PA0~PA3，扫描时使用开漏输出/高阻输入。
+#define KEY_ROW_RCC		RCC_APB2Periph_GPIOA // 行 R1~R4（PA0~PA3）
 #define KEY_ROW_PORT	GPIOA
 #define R1_PIN			GPIO_Pin_3
 #define R2_PIN			GPIO_Pin_2
 #define R3_PIN			GPIO_Pin_1
 #define R4_PIN			GPIO_Pin_0
 
-#define KEY_COL_RCC		RCC_APB2Periph_GPIOA //列 C1 C2 C3 C4 PA4~PA7 【上拉输入】
+#define KEY_COL_RCC		RCC_APB2Periph_GPIOA // 列 C1~C4（PA4~PA7，上拉输入）
 #define KEY_COL_PORT	GPIOA
 #define C1_PIN			GPIO_Pin_4
 #define C2_PIN			GPIO_Pin_5
@@ -67,7 +67,7 @@
 #define BUZZER_ALARM_TIMES 20    
 
 
-//发动机参数分配
+// 舵机 PWM 参数分配（TIM2_CH1 部分重映射至 PA15）。
 #define PWM_TIM                 TIM2
 #define PWM_TIM_CLK             RCC_APB1Periph_TIM2
 
@@ -86,13 +86,16 @@
 #define PWM_PULSE_0_DEG         500             //close
 #define PWM_PULSE_90_DEG        1500            //open
 
-//AS608参数分配
+// AS608 使用 USART2（PA2/PA3），与矩阵键盘 R2/R1 冲突；TIM2 部分重映射也将 CH3 映射到 PA2。
+// 当前引脚配置不能让键盘、AS608 和该 TIM2 重映射同时正常工作，需重新分配引脚。
 #define AS608_USART            USART2
 #define AS608_BAUDRATE         57600
 #define AS608_PACKET_TYPE_CMD  0x01
 #define AS608_PACKET_TYPE_ACK  0x07
 #define AS608_RX_BUFFER_SIZE   32
-#define AS608_DEFAULT_TIMEOUT  1500U /* milliseconds, per received byte */
+#define AS608_DEFAULT_TIMEOUT  1500U /* milliseconds to wait for the first response byte */
+#define AS608_INTERBYTE_TIMEOUT 100U  /* maximum gap between bytes of one ACK packet */
+#define AS608_FINGER_WAIT_TIMEOUT 30000U /* bounded wait for placement/removal */
 
 //密码存储参数分配
 #define Store_Start_Address   0x0800FC00     //存放密码的flash地址（第63页）
@@ -104,6 +107,11 @@
 #define LOG_PAGE_COUNT      2                                                 //日志区占用2页，共2KB
 #define LOG_RECORD_SIZE     6                                                 //每条日志定长6字节=3个半字{方式,成败,序号}
 #define LOG_MAX_RECORDS     ((LOG_PAGE_SIZE*LOG_PAGE_COUNT)/LOG_RECORD_SIZE)  //1024*2/6==最多341条（末尾2字节不用）
+
+//FLASH宏定义
+#define USER_FLASH_BASE_ADDRESS 0x08000000UL
+#define USER_FLASH_END_ADDRESS  0x08010000UL
+#define USER_FLASH_PAGE_SIZE    1024UL
 
 //共享变量声明
 extern volatile uint16_t current_state;          //状态机目前的状态

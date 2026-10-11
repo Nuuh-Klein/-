@@ -5,7 +5,7 @@
 
 /* ======================== 开锁审计日志模块（创意四：Audit Log） ========================
  * 功能：把每一次开锁事件 {方式, 成败, 序号} 以定长记录写入内部 FLASH 后部的一块日志区，
- *       写满后自动覆盖最旧记录，支持 OLED + 编码器翻阅“最近 N 条记录”。
+ *       写满后擦除整个日志区并从头开始记录，支持 OLED + 编码器翻阅当前保留的记录。
  *
  * 依赖：flash.c 提供的 FLASH_ReadHalfWord / FLASH_WriteHalfWord / FLASH_EraseAPage。
  * 注意：日志区地址/长度等参数定义在 config.h（LOG_START_ADDRESS / LOG_RECORD_SIZE 等）。
@@ -33,8 +33,8 @@ typedef struct {
 } Log_Record_t;
 
 /* ---- 对外接口 ---- */
-void     Log_Init(void);                                        // 上电扫描日志区，恢复有效条数与下一序号
-void     Log_Write(uint16_t method, uint16_t result);           // 追加一条开锁事件（自动带上递增序号）
+uint8_t  Log_Init(void);                                        // 上电扫描日志区；返回 1 表示可用
+uint8_t  Log_Write(uint16_t method, uint16_t result);           // 追加事件；返回 1 表示写入成功
 uint16_t Log_GetCount(void);                                    // 返回当前有效日志条数
 uint8_t  Log_Read(uint16_t recent_index, Log_Record_t *record); // 读“第 recent_index 新”的一条（0=最新）
 

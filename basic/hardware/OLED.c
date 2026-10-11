@@ -1,5 +1,6 @@
 #include "stm32f10x.h"
 #include "OLED_Font.h"
+#include "Delay.h"
 
 /*引脚配置*/
 #define OLED_W_SCL(x)		GPIO_WriteBit(GPIOB, GPIO_Pin_8, (BitAction)(x))
@@ -134,6 +135,8 @@ void OLED_Clear(void)
 void OLED_ShowChar(uint8_t Line, uint8_t Column, char Char)
 {      	
 	uint8_t i;
+	if ((Line < 1U) || (Line > 4U) || (Column < 1U) || (Column > 16U) ||
+	    (Char < ' ') || (Char > '~')) return;
 	OLED_SetCursor((Line - 1) * 2, (Column - 1) * 8);		//设置光标位置在上半部分
 	for (i = 0; i < 8; i++)
 	{
@@ -153,11 +156,13 @@ void OLED_ShowChar(uint8_t Line, uint8_t Column, char Char)
   * @param  String 要显示的字符串，范围：ASCII可见字符
   * @retval 无
   */
-void OLED_ShowString(uint8_t Line, uint8_t Column, char *String)
+void OLED_ShowString(uint8_t Line, uint8_t Column, const char *String)
 {
 	uint8_t i;
+	if ((String == 0) || (Line < 1U) || (Line > 4U) || (Column < 1U) || (Column > 16U)) return;
 	for (i = 0; String[i] != '\0'; i++)
 	{
+		if ((uint16_t)Column + i > 16U) break;
 		OLED_ShowChar(Line, Column + i, String[i]);
 	}
 }
@@ -187,6 +192,8 @@ uint32_t OLED_Pow(uint32_t X, uint32_t Y)
 void OLED_ShowNum(uint8_t Line, uint8_t Column, uint32_t Number, uint8_t Length)
 {
 	uint8_t i;
+	if ((Line < 1U) || (Line > 4U) || (Column < 1U) || (Column > 16U) ||
+	    (Length == 0U) || (Length > 10U) || ((uint16_t)Column + Length - 1U > 16U)) return;
 	for (i = 0; i < Length; i++)							
 	{
 		OLED_ShowChar(Line, Column + i, Number / OLED_Pow(10, Length - i - 1) % 10 + '0');
@@ -205,6 +212,8 @@ void OLED_ShowSignedNum(uint8_t Line, uint8_t Column, int32_t Number, uint8_t Le
 {
 	uint8_t i;
 	uint32_t Number1;
+	if ((Line < 1U) || (Line > 4U) || (Column < 1U) || (Column > 16U) ||
+	    (Length == 0U) || (Length > 10U) || ((uint16_t)Column + Length > 16U)) return;
 	if (Number >= 0)
 	{
 		OLED_ShowChar(Line, Column, '+');
@@ -213,7 +222,7 @@ void OLED_ShowSignedNum(uint8_t Line, uint8_t Column, int32_t Number, uint8_t Le
 	else
 	{
 		OLED_ShowChar(Line, Column, '-');
-		Number1 = -Number;
+		Number1 = (uint32_t)(-(Number + 1)) + 1U;
 	}
 	for (i = 0; i < Length; i++)							
 	{
@@ -232,6 +241,8 @@ void OLED_ShowSignedNum(uint8_t Line, uint8_t Column, int32_t Number, uint8_t Le
 void OLED_ShowHexNum(uint8_t Line, uint8_t Column, uint32_t Number, uint8_t Length)
 {
 	uint8_t i, SingleNumber;
+	if ((Line < 1U) || (Line > 4U) || (Column < 1U) || (Column > 16U) ||
+	    (Length == 0U) || (Length > 8U) || ((uint16_t)Column + Length - 1U > 16U)) return;
 	for (i = 0; i < Length; i++)							
 	{
 		SingleNumber = Number / OLED_Pow(16, Length - i - 1) % 16;
@@ -257,6 +268,8 @@ void OLED_ShowHexNum(uint8_t Line, uint8_t Column, uint32_t Number, uint8_t Leng
 void OLED_ShowBinNum(uint8_t Line, uint8_t Column, uint32_t Number, uint8_t Length)
 {
 	uint8_t i;
+	if ((Line < 1U) || (Line > 4U) || (Column < 1U) || (Column > 16U) ||
+	    (Length == 0U) || (Length > 16U) || ((uint16_t)Column + Length - 1U > 16U)) return;
 	for (i = 0; i < Length; i++)							
 	{
 		OLED_ShowChar(Line, Column + i, Number / OLED_Pow(2, Length - i - 1) % 2 + '0');
@@ -270,12 +283,7 @@ void OLED_ShowBinNum(uint8_t Line, uint8_t Column, uint32_t Number, uint8_t Leng
   */
 void OLED_Init(void)
 {
-	uint32_t i, j;
-	
-	for (i = 0; i < 1000; i++)			//上电延时
-	{
-		for (j = 0; j < 1000; j++);
-	}
+	Delay_ms(100); // 等待 OLED 电源和内部复位稳定。
 	
 	OLED_I2C_Init();			//端口初始化
 	

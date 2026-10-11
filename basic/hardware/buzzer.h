@@ -1,5 +1,5 @@
-#ifndef __buzzer-1_H
-#define __buzzer-1_H
+#ifndef BUZZER_H
+#define BUZZER_H
 
 void Buzzer_Init(void);
 void buzzer1(void);

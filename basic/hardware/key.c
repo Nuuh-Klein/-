@@ -176,6 +176,7 @@ void Pwd_ClearInput(void)
 	for (i = 0; i < PWD_MAX_LEN; i++)
 	{
 		InputBuf[i] = 0;
+		SavedPwd[i] = 0;
 	}
 	InputCnt = 0;
 	Key_SaveFlag = 0;
@@ -184,6 +185,11 @@ void Pwd_ClearInput(void)
 void Pwd_Save(void)
 {
 	uint8_t i;
+	if (InputCnt != PWD_MAX_LEN)
+	{
+		Key_SaveFlag = 0;
+		return;
+	}
 	for (i = 0; i < PWD_MAX_LEN; i++)
 	{
 		SavedPwd[i] = InputBuf[i];
@@ -218,10 +224,11 @@ void Pwd_Input_Process(uint8_t key)
 void Pwd_PrintInputToOLED(void)
 {
 	uint8_t i;
+	uint8_t count = (InputCnt > PWD_MAX_LEN) ? PWD_MAX_LEN : InputCnt;
 	OLED_Clear();
 	OLED_ShowString(1, 1, "Input:");
 	for (i = 0; i < PWD_MAX_LEN; i++)
 	{
-		OLED_ShowChar(2, (uint8_t)(2U + i * 2U), (i < InputCnt) ? '*' : ' ');
+		OLED_ShowChar(2, (uint8_t)(2U + i * 2U), (i < count) ? '*' : ' ');
 	}
 }
