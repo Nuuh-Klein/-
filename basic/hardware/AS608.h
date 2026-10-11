@@ -3,27 +3,42 @@
 #include "stm32f10x.h"
 #include <stdint.h>
 
-/* ÕâĞ©ÊÇÖ¸ÁîÂë£¬ËûÃÇ¶¼ÊÇ¹Ì¶¨µÄ£¬²»ĞèÒªºê¶¨Òå*/
-#define AS608_OK            0x00   // ³É¹¦
-#define AS608_ERR_RECV      0x01   // ÊÕ°ü´íÎó
-#define AS608_ERR_NO_FINGER 0x02   // ÎŞÊÖÖ¸
-#define AS608_ERR_IMAGE     0x03   // Í¼ÏñÖÊÁ¿²î
-#define AS608_ERR_MERGE     0x0A   // ºÏ²¢ÌØÕ÷Ê§°Ü
-#define AS608_ERR_LIB_FULL  0x06   // Ö¸ÎÆ¿âÂú
-#define AS608_ERR_NO_MATCH  0x09   // Î´ËÑË÷µ½Æ¥Åä
-#define AS608_ERR_TIMEOUT   0xFF   // ³¬Ê±
+/* è¿™äº›æ˜¯æŒ‡ä»¤ç ï¼Œä»–ä»¬éƒ½æ˜¯å›ºå®šçš„ï¼Œä¸éœ€è¦å®å®šä¹‰*/
+#define AS608_OK            0x00   // æˆåŠŸ
+#define AS608_ERR_RECV      0x01   // æ”¶åŒ…é”™è¯¯
+#define AS608_ERR_NO_FINGER 0x02   // æ— æ‰‹æŒ‡
+#define AS608_ERR_IMAGE     0x03   // å›¾åƒè´¨é‡å·®
+#define AS608_ERR_MERGE     0x0A   // åˆå¹¶ç‰¹å¾å¤±è´¥
+#define AS608_ERR_LIB_FULL  0x06   // æŒ‡çº¹åº“æ»¡
+#define AS608_ERR_NO_MATCH  0x09   // æœªæœç´¢åˆ°åŒ¹é…
+#define AS608_ERR_TIMEOUT   0xFF   // è¶…æ—¶
 
-/* ³õÊ¼»¯ */
+#define AS608_ENROLL_WAIT_FIRST   1
+#define AS608_ENROLL_WAIT_REMOVE  2
+#define AS608_ENROLL_WAIT_SECOND 3
+#define AS608_ENROLL_MERGE        4
+#define AS608_ENROLL_STORE        5
+
+typedef void (*AS608_StatusCallback)(uint8_t status);
+
+/* åˆå§‹åŒ– */
 void AS608_Init(void);
 
-/*Í¨ĞÅ*/
+/*é€šä¿¡*/
 void AS608_SendCmd(uint8_t cmd, uint8_t *param, uint8_t param_len);
+/* timeout is in milliseconds per received byte. */
 uint8_t AS608_ReceiveAck(uint32_t timeout);
+extern uint8_t AS608_LastCommand;       // æœ€è¿‘ä¸€æ¬¡å‘é€çš„æŒ‡ä»¤ï¼Œä¾›é€šä¿¡è¯Šæ–­ä½¿ç”¨
+extern uint8_t AS608_LEDStatus;         // åˆå§‹åŒ–æ—¶ç¯æ§å‘½ä»¤çš„åº”ç­”ç 
+void AS608_SetStatusCallback(AS608_StatusCallback callback);
+uint8_t AS608_WaitFingerRemoved(void);
 
-/*Ö¸ÎÆ²Ù×÷ */
+/*æŒ‡çº¹æ“ä½œ */
 
-uint8_t AS608_Enroll(uint16_t id);                    // Â¼ÈëÖ¸ÎÆ
-uint8_t AS608_DeleteChar(uint16_t id);                // É¾³ıÖ¸ÎÆ
+uint8_t AS608_Enroll(uint16_t id);                    // å½•å…¥æŒ‡çº¹
+uint8_t Finger_Search(uint16_t *match_id, uint16_t *match_score);
+uint8_t AS608_DeleteChar(uint16_t id);                // åˆ é™¤æŒ‡çº¹
+uint8_t Finger_Delete(uint16_t id);                   // åˆ é™¤æŒ‡çº¹ï¼ˆå…¼å®¹æ—§æ¥å£ï¼‰
 
 
 
