@@ -1,136 +1,227 @@
-#include "stm32f10x.h"                  // Device header
+#include "stm32f10x.h"
 #include "key.h"
-#include "delay.h"
 #include "Delay.h"
 #include "OLED.h"
-//全局变量
+
+#define KEY_DEBOUNCE_SAMPLES 20U
+#define KEY_RAW_NONE         0xFFU
+#define KEY_RAW_AMBIGUOUS    0xFEU
+
 uint8_t InputBuf[PWD_MAX_LEN] = {0};
 uint8_t SavedPwd[PWD_MAX_LEN] = {0};
 uint8_t InputCnt = 0;
 uint8_t Key_SaveFlag = 0;
 
+static uint8_t key_stable_raw = KEY_RAW_NONE;
+static uint8_t key_candidate_raw = KEY_RAW_NONE;
+static uint8_t key_debounce_count = 0;
+static uint8_t key_multi_lock = 0;
+static uint8_t key_last_position = 0;
 
-void KEY_Init(void)                      //键盘初始化
+static const uint16_t key_row_pins[4] = {R1_PIN, R2_PIN, R3_PIN, R4_PIN};
+static const uint16_t key_col_pins[4] = {C1_PIN, C2_PIN, C3_PIN, C4_PIN};
+
+/* 行优先：S1-S4 第一行，S5-S8 第二行，以此类推。 */
+static const uint8_t key_codes[16] = {
+	1, 2, 3, 12,       /* 1  2  3  A */
+	4, 5, 6, 13,       /* 4  5  6  B */
+	7, 8, 9, 14,       /* 7  8  9  C */
+	11, 0, 15, 10      /* *  0  #  D */
+};
+
+static uint8_t KEY_ReadMatrix(void)
 {
-	GPIO_InitTypeDef GPIO_InitStruct;  //初始化 行 R1~R4 PA0~PA3 推挽输出
-	RCC_APB2PeriphClockCmd(KEY_ROW_RCC, ENABLE);
+	uint8_t row;
+	uint8_t col;
+	uint8_t found = KEY_RAW_NONE;
+	uint8_t found_count = 0;
+	GPIO_InitTypeDef GPIO_InitStruct;
+
+	for (row = 0; row < 4; row++)
+	{
+		/* 未选中的行置为高阻，避免多键按下时行输出之间相互冲突。 */
+		GPIO_InitStruct.GPIO_Pin = R1_PIN | R2_PIN | R3_PIN | R4_PIN;
+		GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+		GPIO_Init(KEY_ROW_PORT, &GPIO_InitStruct);
+		GPIO_InitStruct.GPIO_Pin = key_row_pins[row];
+		GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_OD;
+		GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
+		GPIO_Init(KEY_ROW_PORT, &GPIO_InitStruct);
+		GPIO_ResetBits(KEY_ROW_PORT, key_row_pins[row]);
+		Delay_us(2);
+
+		for (col = 0; col < 4; col++)
+		{
+			if (GPIO_ReadInputDataBit(KEY_COL_PORT, key_col_pins[col]) == Bit_RESET)
+			{
+				found = (uint8_t)(row * 4U + col);
+				found_count++;
+			}
+		}
+	}
+
 	GPIO_InitStruct.GPIO_Pin = R1_PIN | R2_PIN | R3_PIN | R4_PIN;
-	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
-	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(KEY_ROW_PORT, &GPIO_InitStruct);  //初始化 列 C1~C4 PA4~PA7 上拉输入
-	GPIO_SetBits(KEY_ROW_PORT, R1_PIN | R2_PIN | R3_PIN | R4_PIN); //所有行默认拉高
-	RCC_APB2PeriphClockCmd(KEY_COL_RCC, ENABLE);
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_Init(KEY_ROW_PORT, &GPIO_InitStruct);
+
+	if (found_count == 0U)
+	{
+		return KEY_RAW_NONE;
+	}
+	if (found_count != 1U)
+	{
+		return KEY_RAW_AMBIGUOUS;
+	}
+	return found;
+}
+
+void KEY_Init(void)
+{
+	GPIO_InitTypeDef GPIO_InitStruct;
+
+	RCC_APB2PeriphClockCmd(KEY_ROW_RCC | KEY_COL_RCC, ENABLE);
+	GPIO_InitStruct.GPIO_Pin = R1_PIN | R2_PIN | R3_PIN | R4_PIN;
+	/* 行线扫描时切换为开漏输出；未选中行保持高阻输入。 */
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
+	GPIO_Init(KEY_ROW_PORT, &GPIO_InitStruct);
+
 	GPIO_InitStruct.GPIO_Pin = C1_PIN | C2_PIN | C3_PIN | C4_PIN;
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPU;
 	GPIO_Init(KEY_COL_PORT, &GPIO_InitStruct);
-	GPIO_SetBits(KEY_ROW_PORT,R1_PIN| R2_PIN | R3_PIN | R4_PIN);
+
+	key_stable_raw = KEY_RAW_NONE;
+	key_candidate_raw = KEY_RAW_NONE;
+	key_debounce_count = 0;
+	key_multi_lock = 0;
+	key_last_position = 0;
 }
 
 /**
- * @brief  键盘扫描函数
- * @retval 0：无按键；0~9数字；10=D确认；11=*清空
+ * @brief 非阻塞扫描 4x4 矩阵键盘，稳定按下时仅返回一次键值。
+ * @return KEY_NONE 表示没有新按键；数字为 0~9，A/B/C 为 12~14，
+ *         # 为 15，* 清空为 11，D 确认为 10。
  */
 uint8_t KEY_Scan(void)
 {
-	uint8_t key = 0;
-	//==== R1 = PA3（键盘R1行）：按键1 2 3 A ====
-	GPIO_ResetBits(KEY_ROW_PORT, R1_PIN);
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C1_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C1_PIN));Delay_ms(20); key=1;}
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C2_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C2_PIN));Delay_ms(20); key=2;}
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C3_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C3_PIN));Delay_ms(20); key=3;}
-	GPIO_SetBits(KEY_ROW_PORT, R1_PIN);
+	uint8_t raw_key = KEY_ReadMatrix();
 
-	//==== R2 = PA2（键盘R2行）：按键4 5 6 B ====
-	GPIO_ResetBits(KEY_ROW_PORT, R2_PIN);
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C1_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C1_PIN));Delay_ms(20); key=4;}
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C2_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C2_PIN));Delay_ms(20); key=5;}
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C3_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C3_PIN));Delay_ms(20); key=6;}
-	GPIO_SetBits(KEY_ROW_PORT, R2_PIN);
+	/* 多键同时按下时不猜测键值，并要求全部释放后才重新使能。 */
+	if (raw_key == KEY_RAW_AMBIGUOUS)
+	{
+		key_multi_lock = 1;
+		key_stable_raw = KEY_RAW_NONE;
+		key_candidate_raw = KEY_RAW_NONE;
+		key_debounce_count = 0;
+		Delay_ms(1);
+		return KEY_NONE;
+	}
+	if (key_multi_lock != 0U)
+	{
+		if (raw_key == KEY_RAW_NONE)
+		{
+			if (key_debounce_count < KEY_DEBOUNCE_SAMPLES)
+			{
+				key_debounce_count++;
+			}
+			if (key_debounce_count >= KEY_DEBOUNCE_SAMPLES)
+			{
+				key_multi_lock = 0;
+				key_debounce_count = 0;
+				key_candidate_raw = KEY_RAW_NONE;
+			}
+		}
+		else
+		{
+			key_debounce_count = 0;
+		}
+		Delay_ms(1);
+		return KEY_NONE;
+	}
 
-	//==== R3 = PA1（键盘R3行）：按键7 8 9 C ====
-	GPIO_ResetBits(KEY_ROW_PORT, R3_PIN);
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C1_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C1_PIN));Delay_ms(20); key=7;}
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C2_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C2_PIN));Delay_ms(20); key=8;}
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C3_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C3_PIN));Delay_ms(20); key=9;}
-	GPIO_SetBits(KEY_ROW_PORT, R3_PIN);
+	if (raw_key != key_candidate_raw)
+	{
+		key_candidate_raw = raw_key;
+		key_debounce_count = 1;
+	}
+	else if (key_debounce_count < KEY_DEBOUNCE_SAMPLES)
+	{
+		key_debounce_count++;
+	}
 
-	//==== R4 = PA0（键盘R4行）：* 0  确认D ====
-	GPIO_ResetBits(KEY_ROW_PORT, R4_PIN);
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C1_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C1_PIN));Delay_ms(20); key=11;} // *清空
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C2_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C2_PIN));Delay_ms(20); key=0;}  //数字0
-	if(GPIO_ReadInputDataBit(KEY_COL_PORT, C4_PIN)==0){Delay_ms(20);while(!GPIO_ReadInputDataBit(KEY_COL_PORT,C4_PIN));Delay_ms(20); key=10;} //D确认
-	GPIO_SetBits(KEY_ROW_PORT, R4_PIN);
-	return key;
+	if ((key_debounce_count >= KEY_DEBOUNCE_SAMPLES) &&
+	    (key_stable_raw != key_candidate_raw))
+	{
+		key_stable_raw = key_candidate_raw;
+		if (key_stable_raw != KEY_RAW_NONE)
+		{
+			key_last_position = (uint8_t)(key_stable_raw + 1U);
+			Delay_ms(1);
+			return key_codes[key_stable_raw];
+		}
+	}
+
+	Delay_ms(1);
+	return KEY_NONE;
 }
 
+uint8_t KEY_GetLastPosition(void)
+{
+	return key_last_position;
+}
 
-/**
- * @brief  清空当前输入缓冲区
- */
 void Pwd_ClearInput(void)
 {
 	uint8_t i;
-	for(i = 0; i < PWD_MAX_LEN; i++)
+	for (i = 0; i < PWD_MAX_LEN; i++)
 	{
 		InputBuf[i] = 0;
 	}
 	InputCnt = 0;
+	Key_SaveFlag = 0;
 }
 
-void Pwd_Save(void)  //密码保存函数：临时输入 拷贝 到保存数组
+void Pwd_Save(void)
 {
 	uint8_t i;
-	for(i = 0; i < PWD_MAX_LEN; i++)
+	for (i = 0; i < PWD_MAX_LEN; i++)
 	{
 		SavedPwd[i] = InputBuf[i];
 	}
-	Key_SaveFlag = 1; //标记保存成功
+	Key_SaveFlag = 1;
 }
 
-/**
- * @brief  密码输入处理函数
- * @param  key：扫描得到的键值
- * @note   输满6位，按下D才会执行保存；（4，3）清空全部输入
- */
 void Pwd_Input_Process(uint8_t key)
 {
-	if(key >= 0 && key <= 9) //数字0~9录入
+	if (key == KEY_NONE)
 	{
-		if(InputCnt < PWD_MAX_LEN) //未满6位才录入
+		return;
+	}
+	if (key <= 9U)
+	{
+		if (InputCnt < PWD_MAX_LEN)
 		{
-			InputBuf[InputCnt] = key;
-			InputCnt++;
+			InputBuf[InputCnt++] = key;
+			Key_SaveFlag = 0;
 		}
 	}
-	else if(key == 11) // * 清空
+	else if (key == 11U)
 	{
 		Pwd_ClearInput();
 	}
-	else if(key == 10) //（4，4）确认保存
+	else if ((key == 10U) && (InputCnt == PWD_MAX_LEN))
 	{
-		if(InputCnt == PWD_MAX_LEN) //必须刚好6位才保存
-		{
-			Pwd_Save();
-		}
+		Pwd_Save();
 	}
 }
 
-void Pwd_PrintInputToOLED(void)    
+void Pwd_PrintInputToOLED(void)
 {
 	uint8_t i;
 	OLED_Clear();
-	// 第一行，左上角显示 "Input:"
-	OLED_ShowString(0, 0, "Input:");
-	// 第二行输出星号，从位置稍微往后一点开始输出
-	for(i = 0; i < 6; i++)
+	OLED_ShowString(1, 1, "Input:");
+	for (i = 0; i < PWD_MAX_LEN; i++)
 	{
-		if(i < InputCnt)
-		{
-			OLED_ShowChar(8 + i*12, 24, '*');
-		}
-		else
-		{
-			OLED_ShowChar(8 + i*12, 24, ' ');
-		}
+		OLED_ShowChar(2, (uint8_t)(2U + i * 2U), (i < InputCnt) ? '*' : ' ');
 	}
 }
