@@ -1,53 +1,93 @@
-#include "stm32f10x.h"
+#include "stm32f10x.h" // Device header
+#include "Delay.h"
 #include "OLED.h"
+#include "config.h"
+#include "store.h"
+#include "log.h"
+#include "buzzer.h"
+#include "motor.h"
+#include "encoder.h"
+#include "led.h"
 #include "key.h"
+#include "AS608.h"
 
-static char KEY_GetLabel(uint8_t key)
-{
-	switch (key)
-	{
-		case 0: return '0';
-		case 1: return '1';
-		case 2: return '2';
-		case 3: return '3';
-		case 4: return '4';
-		case 5: return '5';
-		case 6: return '6';
-		case 7: return '7';
-		case 8: return '8';
-		case 9: return '9';
-		case 10: return 'D';
-		case 11: return '*';
-		case 12: return 'A';
-		case 13: return 'B';
-		case 14: return 'C';
-		case 15: return '#';
-		default: return '?';
-	}
-}
+typedef enum{
+    STATE_IDLE,    //????
+    STATE_INPUT,   //????
+    STATE_VERIFY,  //????
+    STATE_LOCKED,  //????
+    STATE_ADMIN,   //?????
+}STATE;
 
-int main(void)
-{
-	uint8_t key;
-	uint16_t event_count = 0;
+ //?????????
+volatile uint16_t current_state=STATE_IDLE;           
+volatile uint16_t error_count=0;
+volatile int locking_remain=30;
+volatile uint16_t origin_password[6]={0};
+volatile uint16_t set_password[6]={1,1,1,1,1,1};
+volatile uint16_t duress_password[6]={1,2,3,4,5,6};
 
-	OLED_Init();
-	KEY_Init();
-	OLED_Clear();
-	OLED_ShowString(1, 1, "4x4 Key Test");
-	OLED_ShowString(2, 1, "Press S1-S16");
-	OLED_ShowString(3, 1, "Last S: 00 Key:-");
-	OLED_ShowString(4, 1, "Events: 0000");
-
-	while (1)
-	{
-		key = KEY_Scan();
-		if (key != KEY_NONE)
-		{
-			event_count++;
-			OLED_ShowNum(3, 9, KEY_GetLastPosition(), 2);
-			OLED_ShowChar(3, 16, KEY_GetLabel(key));
-			OLED_ShowNum(4, 9, event_count, 4);
-		}
-	}
+int main(){
+    //???????
+    OLED_Init();
+    LED_Init();
+    Buzzer_Init();
+    PWM_Init();
+    Store_Init();
+	  Encoder_Init();
+   
+    while(1){
+        switch(current_state){
+            case STATE_IDLE:{
+                if(error_count==3){
+                    //????
+                    
+                    error_count=0;//??????
+                    locking_remain=LOCKING_TIME;
+                    
+                    OLED_ShowString(1,1,"WARING!!!");
+                    OLED_ShowString(2,1,"waiting:");
+                    
+                    while(locking_remain){
+                        //???????
+                        OLED_ShowNum(2,9,locking_remain,2);
+                    }
+                }
+                OLED_ShowString(1,1,"press to start");
+                //
+                break;
+            }
+            case STATE_INPUT:{
+                //
+                break;
+            }
+            case STATE_VERIFY:{
+                uint8_t pass=1;                 //???????
+                for(int i=0;i<6;i++){
+                    if(origin_password[i]!=set_password[i]){
+                        pass=0;                     //??????????
+                        current_state=STATE_IDLE;
+                        error_count++;
+                        break;//??????
+                    }
+                }
+                //????????,?????????(???)
+                
+                if(pass){
+                    //????,????,??(TODO:?? PWM_open() ????)
+                }
+                break;
+            }
+            case STATE_LOCKED:{
+                if(locking_remain==0){
+                    current_state=STATE_IDLE;
+                }
+                break;
+            }
+            case STATE_ADMIN:{
+                OLED_ShowString(1,1,"ADMIN:");
+                break;
+            }
+        }
+    }
 }
