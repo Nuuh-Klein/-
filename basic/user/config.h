@@ -9,7 +9,7 @@
  * [通道受限] 舵机使用 TIM2_CH1/PA0 默认映射；编码器使用 EXTI0/1，按键使用 EXTI10。
  * [硬件受限] PC14/PC15 与 LSE 晶振互斥，且输出驱动能力受限。
  * [config 外占用] OLED 在 OLED.c 中固定写为 PB8/PB9，分配新引脚时也须避开。
- * [接入状态] main.c 支持基础 IO、数字键5编码器、物理S14分步指纹测试；原业务代码已注释保留。
+ * [接入状态] main.c 已恢复原业务状态机；JM101驱动保留，尚未接入业务流程。
  */
 
 //密码参数
@@ -123,6 +123,9 @@
 // TIM2 默认 CH3/CH4 映射 PA2/PA3，但当前仅启用 CH1，不构成额外冲突。
 #define AS608_USART            USART2
 #define AS608_BAUDRATE         57600
+#define AS608_STOP_BITS        USART_StopBits_2 /* JM101实机验证通过：57600/8N2 */
+#define AS608_DEVICE_ADDRESS   0xFFFFFFFFUL /* 主机报文地址；不修改模块地址 */
+#define AS608_POWER_ON_DELAY   500U
 #define AS608_PASSWORD         0x00000000UL /* 默认通信密码；不修改模块中的密码 */
 #define AS608_PACKET_TYPE_CMD  0x01
 #define AS608_PACKET_TYPE_ACK  0x07

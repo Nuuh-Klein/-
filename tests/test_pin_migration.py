@@ -276,7 +276,9 @@ def main():
     gcc = shutil.which("gcc")
     if not gcc:
         raise SystemExit("Host GCC is required for this simulation.")
-    with tempfile.TemporaryDirectory(prefix="locking-pins-") as directory:
+    build_root = ROOT / "basic/build"
+    build_root.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="host-pins-", dir=build_root) as directory:
         temp = Path(directory)
         pins = "\n".join(f"#define GPIO_Pin_{i} (1U << {i})" for i in range(16))
         (temp / "stm32f10x.h").write_text(STUB.replace("#endif", pins + "\n#endif"))
