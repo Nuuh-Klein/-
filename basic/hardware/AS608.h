@@ -41,24 +41,23 @@ typedef struct {
 extern AS608_UARTDiagnostics AS608_LastDiag;
 
 void AS608_Init(void);
-/* 仅配置本地USART及接收中断；调用通信函数时须允许中断，不修改模块参数。 */
+//仅配置本地USART及接收中断；调用通信函数时须允许中断，不修改模块参数
 void AS608_InitSerial(uint32_t baudrate, uint16_t stop_bits);
 void AS608_SetHostAddress(uint32_t address);
 
 //通信
 uint8_t AS608_SendCmd(uint8_t cmd, uint8_t *param, uint8_t param_len);
-/* timeout is the first-byte response wait; subsequent bytes use the configured inter-byte limit. */
 uint8_t AS608_ReceiveAck(uint32_t timeout);
 extern uint8_t AS608_LastCommand;       // 最近一次发送的指令，供通信诊断使用
 void AS608_SetStatusCallback(AS608_StatusCallback callback);
-/* 取消回调仅在命令之间调用，不能在串口收包使用 SysTick 时调用 KEY_Scan/Delay。 */
+//取消回调仅在命令之间调用，不能在串口收包使用 SysTick 时调用 KEY_Scan/Delay
 void AS608_SetCancelCallback(AS608_CancelCallback callback);
 uint8_t AS608_WaitFingerRemoved(void);
 uint8_t AS608_VerifyPassword(void);
 uint8_t AS608_ReadLibraryInfo(uint16_t *capacity, uint16_t *count);
 uint8_t AS608_FindFreeID(uint16_t *id);
 uint8_t AS608_ReadTemplateCount(uint16_t *count);
-/* JM101 V1.8一键指令：逐包读取进度，最终保存/搜索结果才返回成功。 */
+//JM101 V1.8一键指令：逐包读取进度，最终保存/搜索结果才返回成功
 uint8_t AS608_JM101Enroll(uint16_t id);
 uint8_t AS608_JM101Search(uint16_t *match_id, uint16_t *match_score);
 
@@ -67,4 +66,5 @@ uint8_t AS608_Enroll(uint16_t id);                    // 录入指纹
 uint8_t Finger_Search(uint16_t *match_id, uint16_t *match_score);
 uint8_t AS608_DeleteChar(uint16_t id);                // 删除指纹
 uint8_t Finger_Delete(uint16_t id);                   // 删除指纹（兼容旧接口）
+
 #endif

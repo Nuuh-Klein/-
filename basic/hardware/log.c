@@ -36,16 +36,15 @@ static FLASH_Status Log_EraseAll(void){
 uint8_t Log_Init(void){
 	uint16_t method;
 	uint16_t result;
-	/* 因本模块采用“写满整区就擦除重来”的策略，日志永远按槽位 0,1,2,... 连续存放，
-	 * 所以只要从 0 号槽向后找到第一条“空记录”（擦除态，其 method 字段 == 0xFFFF），
-	 * 这个下标就是有效条数 log_count，同时也是下一条记录的写入位置。 */
+	//因本模块采用“写满整区就擦除重来”的策略，日志永远按槽位 0,1,2,... 连续存放，
+	//所以只要从 0 号槽向后找到第一条“空记录”（擦除态，其 method 字段 == 0xFFFF），
+	//这个下标就是有效条数 log_count，同时也是下一条记录的写入位置
 	log_ready = 0;
 	log_count = 0;
 	while(log_count < LOG_MAX_RECORDS){
 		method = Log_ReadMethodAt(log_count);
 		result = Log_ReadResultAt(log_count);
 		if(method == 0xFFFF){
-			/* Method is written last as a commit marker; nonempty payload means a torn write. */
 			if ((result != 0xFFFF) || (Log_ReadSerialAt(log_count) != 0xFFFF)) {
 				if (Log_EraseAll() != FLASH_COMPLETE) return 0;
 				log_count = 0;
@@ -92,14 +91,13 @@ uint8_t Log_Write(uint16_t method, uint16_t result){
 
 	//计算本条记录在 FLASH 中的地址，连续写入 3 个半字 {方式, 成败, 序号}
 	uint32_t addr = LOG_START_ADDRESS + (uint32_t)log_count * LOG_RECORD_SIZE;
-	/* Write the payload first and the method last as a commit marker. */
 	status = FLASH_WriteHalfWord(addr + 2, result);
 	if (status == FLASH_COMPLETE) status = FLASH_WriteHalfWord(addr + 4, log_next_serial);
 	if (status == FLASH_COMPLETE) status = FLASH_WriteHalfWord(addr + 0, method);
 	if (status != FLASH_COMPLETE) { log_ready = 0; return 0; }
 
-	log_count++;         // 有效条数 +1
-	log_next_serial++;   // 事件序号 +1（uint16 自然回绕，回绕后仅影响显示，不影响定位）
+	log_count++;         //有效条数 +1
+	log_next_serial++;   //事件序号 +1（uint16 自然回绕，回绕后仅影响显示，不影响定位）
 	return 1;
 }
 

@@ -67,7 +67,7 @@ void Encoder_Init(void)
     encoder_state = Encoder_ReadState();
     encoder_quadrature_delta = 0;
 
-    /* 两相都检测双边沿，用完整正交状态序列累计一格，避免在中断中延时消抖。 */
+    //两相都检测双边沿，用完整正交状态序列累计一格，避免在中断中延时消抖
     GPIO_EXTILineConfig(ENCODER_PORTSOURCE, ENCODER_PINSOURCE_CH1);  // PB0 -> EXTI0
     GPIO_EXTILineConfig(ENCODER_PORTSOURCE, ENCODER_PINSOURCE_CH2);  // PB1 -> EXTI1
 

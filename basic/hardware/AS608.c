@@ -21,7 +21,7 @@ static volatile uint8_t AS608_QueueHead, AS608_QueueTail;
 static volatile uint16_t AS608_WireCount, AS608_WireErrors, AS608_QueueDropped;
 static volatile uint8_t AS608_WireFirst[8];
 
-/* 中断内只读SR/DR并缓存，不做OLED、延时或协议解析。 */
+//中断缓存
 void USART2_IRQHandler(void)
 {
     uint16_t status = (uint16_t)AS608_USART->SR;
@@ -369,7 +369,7 @@ uint8_t AS608_ReadTemplateCount(uint16_t *count)
     return AS608_OK;
 }
 
-/* 短等待之间扫描取消键；串口收包内部不能调用共享SysTick的键盘扫描。 */
+//短等待之间扫描取消键；串口收包内部不能调用共享SysTick的键盘扫描
 static uint8_t AS608_AutoNextAck(uint32_t *remaining)
 {
     AS608_LastDiag.ack_valid = 0;
@@ -387,9 +387,8 @@ static uint8_t AS608_AutoNextAck(uint32_t *remaining)
 
 static uint8_t AS608_StopAuto(uint8_t result)
 {
-    /* 模块仍在等待手指时，结束本地等待必须同时终止模块操作，防止随后意外写入。
-     * 取消确认可能与旧进度包交错；下一次操作前main重新校验密码。
-     */
+    //模块仍在等待手指时，结束本地等待必须同时终止模块操作，防止随后意外写入。
+    //取消确认可能与旧进度包交错；下一次操作前main重新校验密码。
     uint8_t command = AS608_LastCommand;
     AS608_UARTDiagnostics failed = AS608_LastDiag;
     (void)AS608_Command(0x30, 0, 0);
@@ -400,7 +399,7 @@ static uint8_t AS608_StopAuto(uint8_t result)
 
 uint8_t AS608_JM101Enroll(uint16_t id)
 {
-    /* 两次采集，必须移开；上报步骤；禁止覆盖ID、禁止重复录入相同指纹。 */
+    //两次采集，必须移开；上报步骤；禁止覆盖ID、禁止重复录入相同指纹
     uint8_t param[5] = {(uint8_t)(id >> 8), (uint8_t)id, 2U, 0U, 0x11U};
     uint8_t ack, packets;
     uint8_t accepted = 0;
@@ -414,7 +413,7 @@ uint8_t AS608_JM101Enroll(uint16_t id)
         if (!AS608_LastDiag.ack_valid) return AS608_StopAuto(ack);
         if (AS608_AckLength() < 5U) return AS608_StopAuto(AS608_ERR_RECV);
         stage = AS608_RxBuffer[10]; capture = AS608_RxBuffer[11];
-        /* 手册规定特征提取失败时模块会继续尝试采集，不能提前宣布操作结束。 */
+        //手册规定特征提取失败时模块会继续尝试采集，不能提前宣布操作结束
         if (ack == AS608_ERR_FEATURE && stage == 2U && accepted) continue;
         if (ack != AS608_OK) return ack;
         if (stage == 0U) { accepted = 1; AS608_ReportStatus(AS608_ENROLL_WAIT_FIRST); }
@@ -455,7 +454,7 @@ uint8_t AS608_JM101Search(uint16_t *match_id, uint16_t *match_score)
     return AS608_StopAuto(AS608_ERR_RECV);
 }
 
-/* Capture one image, waiting for a finger if the sensor reports 0x02. */
+//抓取一个图像，等待指纹
 static uint8_t AS608_CaptureToBuffer(uint8_t buffer_number)
 {
     uint8_t ack;
