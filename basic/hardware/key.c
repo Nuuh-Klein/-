@@ -18,8 +18,19 @@ static uint8_t key_debounce_count = 0;
 static uint8_t key_multi_lock = 0;
 static uint8_t key_last_position = 0;
 
-static const uint16_t key_row_pins[4] = {R1_PIN, R2_PIN, R3_PIN, R4_PIN};
-static const uint16_t key_col_pins[4] = {C1_PIN, C2_PIN, C3_PIN, C4_PIN};
+typedef struct {
+	GPIO_TypeDef *port;
+	uint16_t pin;
+} KEY_GPIO;
+
+static const KEY_GPIO key_rows[4] = {
+	{R1_PORT, R1_PIN}, {R2_PORT, R2_PIN},
+	{R3_PORT, R3_PIN}, {R4_PORT, R4_PIN}
+};
+static const KEY_GPIO key_cols[4] = {
+	{C1_PORT, C1_PIN}, {C2_PORT, C2_PIN},
+	{C3_PORT, C3_PIN}, {C4_PORT, C4_PIN}
+};
 
 /* 行优先：S1-S4 第一行，S5-S8 第二行，以此类推。 */
 static const uint8_t key_codes[16] = {
@@ -28,6 +39,20 @@ static const uint8_t key_codes[16] = {
 	7, 8, 9, 14,       /* 7  8  9  C */
 	11, 0, 15, 10      /* *  0  #  D */
 };
+
+/* 行线跨端口，逐条恢复高阻；任何时刻只允许选中行输出低电平。 */
+static void KEY_ReleaseRows(void)
+{
+	uint8_t row;
+	GPIO_InitTypeDef GPIO_InitStruct;
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
+	for (row = 0; row < 4; row++)
+	{
+		GPIO_InitStruct.GPIO_Pin = key_rows[row].pin;
+		GPIO_Init(key_rows[row].port, &GPIO_InitStruct);
+	}
+}
 
 static uint8_t KEY_ReadMatrix(void)
 {
@@ -40,19 +65,18 @@ static uint8_t KEY_ReadMatrix(void)
 	for (row = 0; row < 4; row++)
 	{
 		/* 未选中的行置为高阻，避免多键按下时行输出之间相互冲突。 */
-		GPIO_InitStruct.GPIO_Pin = R1_PIN | R2_PIN | R3_PIN | R4_PIN;
-		GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-		GPIO_Init(KEY_ROW_PORT, &GPIO_InitStruct);
-		GPIO_InitStruct.GPIO_Pin = key_row_pins[row];
+		KEY_ReleaseRows();
+		/* 先预置输出锁存器为低，再切换开漏输出，避免切换时出现高电平。 */
+		GPIO_ResetBits(key_rows[row].port, key_rows[row].pin);
+		GPIO_InitStruct.GPIO_Pin = key_rows[row].pin;
 		GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_OD;
 		GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
-		GPIO_Init(KEY_ROW_PORT, &GPIO_InitStruct);
-		GPIO_ResetBits(KEY_ROW_PORT, key_row_pins[row]);
+		GPIO_Init(key_rows[row].port, &GPIO_InitStruct);
 		Delay_us(2);
 
 		for (col = 0; col < 4; col++)
 		{
-			if (GPIO_ReadInputDataBit(KEY_COL_PORT, key_col_pins[col]) == Bit_RESET)
+			if (GPIO_ReadInputDataBit(key_cols[col].port, key_cols[col].pin) == Bit_RESET)
 			{
 				found = (uint8_t)(row * 4U + col);
 				found_count++;
@@ -60,9 +84,7 @@ static uint8_t KEY_ReadMatrix(void)
 		}
 	}
 
-	GPIO_InitStruct.GPIO_Pin = R1_PIN | R2_PIN | R3_PIN | R4_PIN;
-	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(KEY_ROW_PORT, &GPIO_InitStruct);
+	KEY_ReleaseRows();
 
 	if (found_count == 0U)
 	{
@@ -77,18 +99,20 @@ static uint8_t KEY_ReadMatrix(void)
 
 void KEY_Init(void)
 {
+	uint8_t col;
 	GPIO_InitTypeDef GPIO_InitStruct;
 
 	RCC_APB2PeriphClockCmd(KEY_ROW_RCC | KEY_COL_RCC, ENABLE);
-	GPIO_InitStruct.GPIO_Pin = R1_PIN | R2_PIN | R3_PIN | R4_PIN;
 	/* 行线扫描时切换为开漏输出；未选中行保持高阻输入。 */
-	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
-	GPIO_Init(KEY_ROW_PORT, &GPIO_InitStruct);
+	KEY_ReleaseRows();
 
-	GPIO_InitStruct.GPIO_Pin = C1_PIN | C2_PIN | C3_PIN | C4_PIN;
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPU;
-	GPIO_Init(KEY_COL_PORT, &GPIO_InitStruct);
+	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
+	for (col = 0; col < 4; col++)
+	{
+		GPIO_InitStruct.GPIO_Pin = key_cols[col].pin;
+		GPIO_Init(key_cols[col].port, &GPIO_InitStruct);
+	}
 
 	key_stable_raw = KEY_RAW_NONE;
 	key_candidate_raw = KEY_RAW_NONE;

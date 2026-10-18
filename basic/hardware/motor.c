@@ -6,8 +6,8 @@ void PWM_Init(void) // 初始化舵机 PWM，默认输出关闭位置脉宽。
     RCC_APB2PeriphClockCmd(PWM_GPIO_CLK, ENABLE);
     RCC_APB2PeriphClockCmd(PWM_AFIO_CLK, ENABLE);
     
-    GPIO_PinRemapConfig(PWM_REMAP_PIN, ENABLE);
-    GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);  
+    GPIO_PinRemapConfig(PWM_REMAP_PIN, PWM_REMAP_STATE); // TIM2_CH1 恢复默认 PA0。
+    GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE); // 保留原调试配置，SWD 可用。
 
     TIM_InternalClockConfig(PWM_TIM);
 

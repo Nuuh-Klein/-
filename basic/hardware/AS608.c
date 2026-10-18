@@ -10,6 +10,18 @@ uint8_t AS608_RxBuffer[AS608_RX_BUFFER_SIZE];
 uint8_t AS608_LastCommand;
 uint8_t AS608_LEDStatus = AS608_ERR_TIMEOUT;
 static AS608_StatusCallback AS608_Callback;
+static AS608_CancelCallback AS608_Cancel;
+static uint16_t AS608_Capacity;
+
+void AS608_SetCancelCallback(AS608_CancelCallback callback)
+{
+    AS608_Cancel = callback;
+}
+
+static uint8_t AS608_IsCancelled(void)
+{
+    return (AS608_Cancel != 0) && AS608_Cancel();
+}
 
 void AS608_SetStatusCallback(AS608_StatusCallback callback)
 {
@@ -67,6 +79,8 @@ void AS608_Init(void)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
     USART_InitTypeDef USART_InitStructure;
+
+    AS608_Capacity = 0;
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
@@ -174,6 +188,66 @@ static uint8_t AS608_Command(uint8_t command, uint8_t *param, uint8_t param_len)
     return AS608_ReceiveAck(AS608_DEFAULT_TIMEOUT);
 }
 
+static uint16_t AS608_AckLength(void)
+{
+    return (uint16_t)(((uint16_t)AS608_RxBuffer[7] << 8) | AS608_RxBuffer[8]);
+}
+
+uint8_t AS608_VerifyPassword(void)
+{
+    uint32_t password = AS608_PASSWORD;
+    uint8_t param[4] = {(uint8_t)(password >> 24), (uint8_t)(password >> 16),
+                        (uint8_t)(password >> 8), (uint8_t)password};
+    return AS608_Command(0x13, param, 4);
+}
+
+uint8_t AS608_ReadLibraryInfo(uint16_t *capacity, uint16_t *count)
+{
+    uint8_t ack;
+    uint16_t size;
+    if (capacity == 0 || count == 0) return AS608_ERR_RECV;
+    *capacity = 0;
+    *count = 0;
+    AS608_Capacity = 0;
+    ack = AS608_Command(0x0F, 0, 0); // ReadSysPara
+    if (ack != AS608_OK) return ack;
+    if (AS608_AckLength() < 19U) return AS608_ERR_RECV;
+    size = (uint16_t)(((uint16_t)AS608_RxBuffer[14] << 8) | AS608_RxBuffer[15]);
+    if (size == 0U) return AS608_ERR_RECV;
+    ack = AS608_Command(0x1D, 0, 0); // TemplateNum
+    if (ack != AS608_OK) return ack;
+    if (AS608_AckLength() < 5U) return AS608_ERR_RECV;
+    *count = (uint16_t)(((uint16_t)AS608_RxBuffer[10] << 8) | AS608_RxBuffer[11]);
+    if (*count > size) return AS608_ERR_RECV;
+    *capacity = size;
+    AS608_Capacity = size;
+    return AS608_OK;
+}
+
+uint8_t AS608_FindFreeID(uint16_t *id)
+{
+    uint16_t page;
+    uint16_t offset;
+    uint8_t ack;
+    if (id == 0 || AS608_Capacity == 0U) return AS608_ERR_RECV;
+    *id = 0;
+    for (page = 0; page < ((uint32_t)AS608_Capacity + 255U) / 256U; page++) {
+        uint8_t param = (uint8_t)page;
+        ack = AS608_Command(0x1F, &param, 1); // ReadIndexTable，32字节位图
+        if (ack != AS608_OK) return ack;
+        if (AS608_AckLength() < 35U) return AS608_ERR_RECV;
+        for (offset = 0; offset < 256U; offset++) {
+            uint32_t candidate = (uint32_t)page * 256U + offset;
+            if (candidate >= AS608_Capacity) break;
+            if ((AS608_RxBuffer[10U + offset / 8U] & (1U << (offset % 8U))) == 0U) {
+                *id = (uint16_t)candidate;
+                return AS608_OK;
+            }
+        }
+    }
+    return AS608_ERR_LIB_FULL;
+}
+
 /* Capture one image, waiting for a finger if the sensor reports 0x02. */
 static uint8_t AS608_CaptureToBuffer(uint8_t buffer_number)
 {
@@ -181,6 +255,7 @@ static uint8_t AS608_CaptureToBuffer(uint8_t buffer_number)
     uint32_t waited_ms = 0;
 
     do {
+        if (AS608_IsCancelled()) return AS608_ERR_CANCELLED;
         ack = AS608_Command(0x01, 0, 0); /* GenImg */
         if (ack == AS608_ERR_NO_FINGER && waited_ms < AS608_FINGER_WAIT_TIMEOUT) {
             Delay_ms(100);
@@ -198,6 +273,7 @@ uint8_t AS608_WaitFingerRemoved(void)
     uint32_t waited_ms = 0;
 
     do {
+        if (AS608_IsCancelled()) return AS608_ERR_CANCELLED;
         ack = AS608_Command(0x01, 0, 0); /* GenImg */
         if (ack == AS608_OK && waited_ms < AS608_FINGER_WAIT_TIMEOUT) {
             Delay_ms(100);
@@ -222,8 +298,10 @@ uint8_t AS608_Enroll(uint16_t id)
     AS608_ReportStatus(AS608_ENROLL_WAIT_SECOND);
     ack = AS608_CaptureToBuffer(buffer_number_2); if (ack != AS608_OK) return ack;
     AS608_ReportStatus(AS608_ENROLL_MERGE);
+    if (AS608_IsCancelled()) return AS608_ERR_CANCELLED;
     ack = AS608_Command(0x05, 0, 0); if (ack != AS608_OK) return ack;
     AS608_ReportStatus(AS608_ENROLL_STORE);
+    if (AS608_IsCancelled()) return AS608_ERR_CANCELLED;
     return AS608_Command(0x06, store_param, 3);
 }
 
@@ -231,11 +309,19 @@ uint8_t Finger_Search(uint16_t *match_id, uint16_t *match_score)
 {
     uint8_t ack;
     uint8_t buffer_number = 0x01;
-    uint8_t search[5] = {0x01, 0x00, 0x00, 0x03, 0xE8};
+    uint8_t search[5] = {0x01, 0x00, 0x00, 0x00, 0x00};
 
     if ((match_id == 0) || (match_score == 0)) return AS608_ERR_RECV;
     *match_id = 0;
     *match_score = 0;
+    if (AS608_Capacity == 0U) {
+        uint16_t capacity;
+        uint16_t count;
+        ack = AS608_ReadLibraryInfo(&capacity, &count);
+        if (ack != AS608_OK) return ack;
+    }
+    search[3] = (uint8_t)(AS608_Capacity >> 8);
+    search[4] = (uint8_t)AS608_Capacity;
     ack = AS608_CaptureToBuffer(buffer_number); if (ack != AS608_OK) return ack;
     ack = AS608_Command(0x04, search, 5);
     if (ack == AS608_OK) {

@@ -13,7 +13,7 @@ void LED_Init(void)
     GPIO_InitStructure;
 	GPIO_InitStructure.GPIO_Mode=GPIO_Mode_Out_PP;
 	GPIO_InitStructure.GPIO_Pin=LED_Green_Pin|LED_Red_Pin;
-	GPIO_InitStructure.GPIO_Speed=GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Speed=GPIO_Speed_2MHz; // PC14/PC15 输出速度不得超过 2MHz。
 	GPIO_Init(LED_Green_PORT,&GPIO_InitStructure);
 	LED_Alloff();
 }

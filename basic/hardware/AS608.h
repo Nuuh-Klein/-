@@ -11,7 +11,9 @@
 #define AS608_ERR_IMAGE        0x03   // 图像质量差
 #define AS608_ERR_FEATURE      0x07   // 特征提取失败
 #define AS608_ERR_MERGE        0x0A   // 合并特征失败
-#define AS608_ERR_LIB_FULL     0x06   // 指纹库满
+#define AS608_ERR_IMAGE_MESS   0x06   // 图像过乱，无法生成特征
+#define AS608_ERR_LIB_FULL     0xFC   // 本地状态：索引表中没有空闲位置
+#define AS608_ERR_CANCELLED    0xFD   // 本地状态：用户取消等待
 #define AS608_ERR_NO_MATCH     0x09   // 未搜索到匹配
 #define AS608_ERR_TIMEOUT      0xFF   // 超时
 #define AS608_ERR_WAIT_TIMEOUT 0xFE   // 等待手指放置/移开超时
@@ -23,6 +25,7 @@
 #define AS608_ENROLL_STORE        5
 
 typedef void (*AS608_StatusCallback)(uint8_t status);
+typedef uint8_t (*AS608_CancelCallback)(void);
 
 void AS608_Init(void);
 
@@ -33,7 +36,12 @@ uint8_t AS608_ReceiveAck(uint32_t timeout);
 extern uint8_t AS608_LastCommand;       // 最近一次发送的指令，供通信诊断使用
 extern uint8_t AS608_LEDStatus;         // 初始化时灯控命令的应答码
 void AS608_SetStatusCallback(AS608_StatusCallback callback);
+/* 取消回调仅在命令之间调用，不能在串口收包使用 SysTick 时调用 KEY_Scan/Delay。 */
+void AS608_SetCancelCallback(AS608_CancelCallback callback);
 uint8_t AS608_WaitFingerRemoved(void);
+uint8_t AS608_VerifyPassword(void);
+uint8_t AS608_ReadLibraryInfo(uint16_t *capacity, uint16_t *count);
+uint8_t AS608_FindFreeID(uint16_t *id);
 
 //指纹操作
 uint8_t AS608_Enroll(uint16_t id);                    // 录入指纹
