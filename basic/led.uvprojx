@@ -18,7 +18,7 @@
           <Vendor>STMicroelectronics</Vendor>
           <PackID>Keil.STM32F1xx_DFP.2.2.0</PackID>
           <PackURL>http://www.keil.com/pack/</PackURL>
-          <Cpu>IRAM(0x20000000,0x5000) IROM(0x08000000,0x10000) CPUTYPE("Cortex-M3") CLOCK(12000000) ELITTLE</Cpu>
+          <Cpu>IRAM(0x20000000,0x5000) IROM(0x08000000,0xD400) CPUTYPE("Cortex-M3") CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
           <StartupFile></StartupFile>
           <FlashDriverDll>UL2CM3(-S0 -C0 -P0 -FD20000000 -FC1000 -FN1 -FF0STM32F10x_128 -FS08000000 -FL020000 -FP0($$Device:STM32F103C8$Flash\STM32F10x_128.FLM))</FlashDriverDll>
@@ -249,7 +249,7 @@
               <IROM>
                 <Type>1</Type>
                 <StartAddress>0x8000000</StartAddress>
-                <Size>0x10000</Size>
+                <Size>0xd400</Size>
               </IROM>
               <XRAM>
                 <Type>0</Type>
@@ -274,7 +274,7 @@
               <OCR_RVCT4>
                 <Type>1</Type>
                 <StartAddress>0x8000000</StartAddress>
-                <Size>0xfc000</Size>
+                <Size>0xd400</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
                 <Type>1</Type>
@@ -799,6 +799,261 @@
               <FileName>log.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\hardware\log.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Pattern Lock</GroupName>
+          <Files>
+            <File>
+              <FileName>pattern.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\pattern.c</FilePath>
+            </File>
+            <File>
+              <FileName>pattern.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\pattern.h</FilePath>
+            </File>
+            <File>
+              <FileName>pattern_store.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\pattern_store.c</FilePath>
+            </File>
+            <File>
+              <FileName>pattern_store.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\pattern_store.h</FilePath>
+            </File>
+            <File>
+              <FileName>pattern_view.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\pattern_view.c</FilePath>
+            </File>
+            <File>
+              <FileName>pattern_view.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\pattern_view.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Pattern Application</GroupName>
+          <Files>
+            <File>
+              <FileName>pattern_app.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\pattern_app.c</FilePath>
+            </File>
+            <File>
+              <FileName>pattern_app.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\pattern_app.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Timebase</GroupName>
+          <Files>
+            <File>
+              <FileName>timebase.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\system\timebase.c</FilePath>
+            </File>
+            <File>
+              <FileName>timebase.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\system\timebase.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Password Input Test</GroupName>
+          <Files>
+            <File>
+              <FileName>password_demo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\password_demo.c</FilePath>
+            </File>
+            <File>
+              <FileName>password_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\password_demo.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Dial Test</GroupName>
+          <Files>
+            <File>
+              <FileName>dial_sequence.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\dial_sequence.c</FilePath>
+            </File>
+            <File>
+              <FileName>dial_sequence.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\dial_sequence.h</FilePath>
+            </File>
+            <File>
+              <FileName>dial_view.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\dial_view.c</FilePath>
+            </File>
+            <File>
+              <FileName>dial_view.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\dial_view.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Interaction Test Menu</GroupName>
+          <Files>
+            <File>
+              <FileName>interaction_demo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\interaction_demo.c</FilePath>
+            </File>
+            <File>
+              <FileName>interaction_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\interaction_demo.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Password Input Core</GroupName>
+          <Files>
+            <File>
+              <FileName>password_input.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\password_input.c</FilePath>
+            </File>
+            <File>
+              <FileName>password_input.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\password_input.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Input Events</GroupName>
+          <Files>
+            <File>
+              <FileName>input_event.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\input_event.c</FilePath>
+            </File>
+            <File>
+              <FileName>input_event.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\input_event.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Duress Preparation</GroupName>
+          <Files>
+            <File>
+              <FileName>credentials.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\credentials.c</FilePath>
+            </File>
+            <File>
+              <FileName>credentials.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\credentials.h</FilePath>
+            </File>
+            <File>
+              <FileName>auth.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\auth.c</FilePath>
+            </File>
+            <File>
+              <FileName>auth.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\auth.h</FilePath>
+            </File>
+            <File>
+              <FileName>credential_store.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\credential_store.c</FilePath>
+            </File>
+            <File>
+              <FileName>credential_store.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\credential_store.h</FilePath>
+            </File>
+            <File>
+              <FileName>duress_demo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\duress_demo.c</FilePath>
+            </File>
+            <File>
+              <FileName>duress_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\duress_demo.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Audit Log Preparation</GroupName>
+          <Files>
+            <File>
+              <FileName>audit.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\audit.c</FilePath>
+            </File>
+            <File>
+              <FileName>audit.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\audit.h</FilePath>
+            </File>
+            <File>
+              <FileName>log_demo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\log_demo.c</FilePath>
+            </File>
+            <File>
+              <FileName>log_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\log_demo.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Administrator Core</GroupName>
+          <Files>
+            <File>
+              <FileName>admin_store.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\admin_store.c</FilePath>
+            </File>
+            <File>
+              <FileName>admin_store.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\admin_store.h</FilePath>
+            </File>
+            <File>
+              <FileName>admin_fingerprint.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\admin_fingerprint.c</FilePath>
+            </File>
+            <File>
+              <FileName>admin_fingerprint.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\admin_fingerprint.h</FilePath>
+            </File>
+            <File>
+              <FileName>credential_editor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hardware\credential_editor.c</FilePath>
+            </File>
+            <File>
+              <FileName>credential_editor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hardware\credential_editor.h</FilePath>
             </File>
           </Files>
         </Group>

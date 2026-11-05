@@ -26,6 +26,16 @@
 #define AS608_ENROLL_MERGE        4
 #define AS608_ENROLL_STORE        5
 
+#define AS608_ERR_FINGER_PRESENT 0xFBU /* Local: removal was not confirmed. */
+#define AS608_ERR_SAVE_CONFIG 0xFAU /* Local: MCU role journal write failed. */
+/* Single-command stages: no automatic advance/wait between keypad confirmations. */
+uint8_t AS608_IDOccupied(uint16_t id, uint8_t *occupied);
+uint8_t AS608_CaptureOnce(uint8_t buffer_number);
+uint8_t AS608_CheckRemoved(void);
+uint8_t AS608_SearchBuffer(uint8_t buffer_number, uint16_t *id, uint16_t *score);
+uint8_t AS608_MergeBuffers(void);
+uint8_t AS608_StoreBuffer(uint16_t id);
+
 typedef void (*AS608_StatusCallback)(uint8_t status);
 typedef uint8_t (*AS608_CancelCallback)(void);
 
@@ -39,6 +49,12 @@ typedef struct {
     uint8_t first_rx[8];   // 最先收到的8个原始字节，便于调试器查看
 } AS608_UARTDiagnostics;
 extern AS608_UARTDiagnostics AS608_LastDiag;
+typedef struct {
+    uint16_t brr, cr1, cr2;
+    uint8_t gpio_modes, remapped, irq_enabled, irq_masked, priority_group, irq_priority;
+} AS608_HardwareState;
+/* Read-only snapshot; does not drain receive data, reset UART or send a command. */
+void AS608_GetHardwareState(AS608_HardwareState *state);
 
 void AS608_Init(void);
 //仅配置本地USART及接收中断；调用通信函数时须允许中断，不修改模块参数
@@ -54,6 +70,9 @@ void AS608_SetStatusCallback(AS608_StatusCallback callback);
 void AS608_SetCancelCallback(AS608_CancelCallback callback);
 uint8_t AS608_WaitFingerRemoved(void);
 uint8_t AS608_VerifyPassword(void);
+/* Diagnostic only: verify using foreground RX polling, restore prior NVIC enable.
+ * Sends only command 13; does not enroll/delete/change module parameters. */
+uint8_t AS608_VerifyPasswordPolled(void);
 uint8_t AS608_ReadLibraryInfo(uint16_t *capacity, uint16_t *count);
 uint8_t AS608_FindFreeID(uint16_t *id);
 uint8_t AS608_ReadTemplateCount(uint16_t *count);

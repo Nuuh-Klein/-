@@ -32,7 +32,7 @@
 
 //LED参数
 #define LED_RCC_PORT        RCC_APB2Periph_GPIOC
-#define LED_Green_PORT            GPIOC
+#define LED_Green_PORT      GPIOC
 #define LED_Green_Pin       GPIO_Pin_15
 #define LED_Red_PORT        GPIOC
 #define LED_Red_Pin         GPIO_Pin_14
@@ -42,6 +42,11 @@
 #define ENCODER_PORT        GPIOB
 #define ENCODER_Pin_CH1     GPIO_Pin_0
 #define ENCODER_Pin_CH2     GPIO_Pin_1
+
+// 上板核对方向和机械卡点后可调整：正数事件为右转。
+#define ENCODER_DIRECTION          1     // 若实物顺时针显示 L，改为 -1
+#define ENCODER_EDGES_PER_STEP     4     // 每格完整正交周期；半周期卡点可改为 2
+#define ENCODER_KEY_DEBOUNCE_MS    25UL
 
 //AFIO映射宏（给GPIO_EXTILineConfig专用）
 #define ENCODER_PORTSOURCE      GPIO_PortSourceGPIOB    //AFIO端口源
@@ -107,15 +112,26 @@
 #define AS608_FINGER_WAIT_TIMEOUT 30000U 
 
 //密码存储参数分配
+#define ADMIN_START_ADDRESS      0x0800D400UL  // 管理员ID双页；程序链接必须止于此
+#define ADMIN_PAGE_COUNT         2U
+#define CREDENTIAL_START_ADDRESS 0x0800E400UL  // 两页新口令区，第57、58页；保留原数据区
+#define CREDENTIAL_PAGE_COUNT    2U
+
+#define PATTERN_START_ADDRESS 0x0800EC00UL   // 图案双页日志：第59、60页
+#define PATTERN_PAGE_COUNT    2U
+#define PATTERN_UNLOCK_MS     3000UL
+#define PATTERN_FEEDBACK_MS   1200UL
+
 #define Store_Start_Address   0x0800FC00     //存放密码的flash地址（第63页）
 #define Store_Data_Length     12             //存放密码的数组长度
 
 //审计日志存储参数分配
-#define LOG_START_ADDRESS   0x0800F400                                        //日志区起始地址（第61页）
+#define LOG_START_ADDRESS   0x0800DC00UL                                      // 新版日志，第55、56页
+#define LEGACY_LOG_START_ADDRESS 0x0800F400UL                                 // 旧日志保留，不自动迁移或擦除
 #define LOG_PAGE_SIZE       1024                                              //每页1KB
 #define LOG_PAGE_COUNT      2                                                 //日志区占用2页，共2KB
-#define LOG_RECORD_SIZE     6                                                 //每条日志定长6字节=3个半字{方式,成败,序号}
-#define LOG_MAX_RECORDS     ((LOG_PAGE_SIZE*LOG_PAGE_COUNT)/LOG_RECORD_SIZE)  //1024*2/6==最多341条（末尾2字节不用）
+#define LOG_RECORD_SIZE     16U                                               // 版本、32位编号、方式、成败/胁迫、CRC和提交标记
+#define LOG_MAX_RECORDS     ((LOG_PAGE_SIZE/LOG_RECORD_SIZE)*LOG_PAGE_COUNT)   // 最多128条，按页循环
 
 //FLASH参数
 #define USER_FLASH_BASE_ADDRESS 0x08000000UL

@@ -115,7 +115,10 @@ static void check_active_rows(void) {
 void GPIO_Init(GPIO_TypeDef *port, GPIO_InitTypeDef *cfg) {
     check_key_pins(port, cfg->GPIO_Pin);
     if (key_only) assert(cfg->GPIO_Speed == GPIO_Speed_2MHz);
-    if (port == GPIOC) assert(cfg->GPIO_Speed == GPIO_Speed_2MHz);
+    if (port == GPIOC) {
+        assert(cfg->GPIO_Speed == GPIO_Speed_2MHz);
+        assert(!(port->output & cfg->GPIO_Pin)); /* inactive latch before output enable */
+    }
     for (unsigned p = 0; p < 16; ++p)
         if (cfg->GPIO_Pin & (1U << p)) port->mode[p] = cfg->GPIO_Mode;
     if (key_only) check_active_rows();
@@ -252,15 +255,24 @@ static void test_pwm_and_buzzer(void) {
     assert(GPIOB->mode[8] == 0 && GPIOB->mode[9] == 0);
 }
 static void test_leds(void) {
+    GPIOC->output |= 0xC000U; /* Simulate the previous firmware's inactive latch. */
     LED_Init();
     assert(GPIOC->mode[14] == GPIO_Mode_Out_PP && GPIOC->mode[15] == GPIO_Mode_Out_PP);
-    assert((GPIOC->output & 0xC000U) == 0xC000U);
-    LED_Red_On();
-    assert((GPIOC->output & 0xC000U) == 0x8000U);
-    LED_Green_On();
     assert((GPIOC->output & 0xC000U) == 0);
+    LED_Red_On();
+    assert((GPIOC->output & 0xC000U) == 0x4000U);
+    LED_Red_Off();
+    assert((GPIOC->output & 0xC000U) == 0);
+    LED_Green_On();
+    assert((GPIOC->output & 0xC000U) == 0x8000U);
+    LED_Red_Off(); /* Red control must preserve green. */
+    assert((GPIOC->output & 0xC000U) == 0x8000U);
+    LED_Green_Off();
+    assert((GPIOC->output & 0xC000U) == 0);
+    LED_Red_On(); LED_Green_Off(); /* Green control must preserve red. */
+    assert((GPIOC->output & 0xC000U) == 0x4000U);
     LED_Alloff();
-    assert((GPIOC->output & 0xC000U) == 0xC000U);
+    assert((GPIOC->output & 0xC000U) == 0);
 }
 int main(void) {
     test_keyboard();

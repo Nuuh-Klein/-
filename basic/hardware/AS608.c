@@ -11,6 +11,7 @@ uint8_t AS608_LastCommand;
 AS608_UARTDiagnostics AS608_LastDiag;
 static AS608_StatusCallback AS608_Callback;
 static AS608_CancelCallback AS608_Cancel;
+static uint8_t AS608_PollingReceive;
 static uint16_t AS608_Capacity;
 static uint32_t AS608_HostAddress = AS608_DEVICE_ADDRESS;
 #define AS608_UART_ERROR_MASK (USART_SR_PE | USART_SR_FE | USART_SR_NE | USART_SR_ORE)
@@ -59,6 +60,20 @@ void AS608_SetHostAddress(uint32_t address)
     AS608_HostAddress = address;
 }
 
+void AS608_GetHardwareState(AS608_HardwareState *state)
+{
+    if (!state) return;
+    state->brr = (uint16_t)AS608_USART->BRR;
+    state->cr1 = (uint16_t)AS608_USART->CR1;
+    state->cr2 = (uint16_t)AS608_USART->CR2;
+    state->gpio_modes = (uint8_t)((GPIOA->CRL >> 8) & 0xFFU);
+    state->remapped = (AFIO->MAPR & (1U << 3)) != 0U;
+    state->irq_enabled = (NVIC->ISER[USART2_IRQn >> 5] & (1UL << (USART2_IRQn & 31))) != 0U;
+    state->irq_masked = __get_PRIMASK() != 0U;
+    state->priority_group = (uint8_t)((SCB->AIRCR >> 8) & 7U);
+    state->irq_priority = NVIC->IP[USART2_IRQn];
+}
+
 static void AS608_ResetDiagnostics(void)
 {
     uint8_t i;
@@ -96,10 +111,18 @@ static void AS608_ReportStatus(uint8_t status)
     if (AS608_Callback != 0) AS608_Callback(status);
 }
 
+static void AS608_PumpPolledRx(void)
+{
+    if (AS608_PollingReceive &&
+        (USART_GetFlagStatus(AS608_USART, USART_FLAG_RXNE) != RESET ||
+         (AS608_USART->SR & AS608_UART_ERROR_MASK) != 0U)) USART2_IRQHandler();
+}
+
 static uint8_t AS608_SendByte(uint8_t data)
 {
     uint32_t timeout = 100000U;
     while (USART_GetFlagStatus(AS608_USART, USART_FLAG_TXE) == RESET) {
+        AS608_PumpPolledRx();
         if (timeout-- == 0U) return 0;
     }
     USART_SendData(AS608_USART, data);
@@ -116,6 +139,7 @@ static uint8_t AS608_ReadByte(uint8_t *data, uint32_t timeout)
 	SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
 
 	while (1) {
+        AS608_PumpPolledRx();
         AS608_SyncRxDiagnostics();
         if (AS608_QueueTail != AS608_QueueHead) {
             uint8_t tail = AS608_QueueTail;
@@ -157,6 +181,7 @@ static uint8_t AS608_WaitTxComplete(void)
 {
     uint32_t timeout = 1000000U;
     while (USART_GetFlagStatus(AS608_USART, USART_FLAG_TC) == RESET) {
+        AS608_PumpPolledRx();
         if (timeout-- == 0U) return 0;
     }
     AS608_LastDiag.tx_complete = 1;
@@ -308,6 +333,19 @@ uint8_t AS608_VerifyPassword(void)
     uint8_t param[4] = {(uint8_t)(password >> 24), (uint8_t)(password >> 16),
                         (uint8_t)(password >> 8), (uint8_t)password};
     return AS608_Command(0x13, param, 4);
+}
+
+uint8_t AS608_VerifyPasswordPolled(void)
+{
+    uint8_t result;
+    uint8_t enabled = (NVIC->ISER[USART2_IRQn >> 5] & (1UL << (USART2_IRQn & 31))) != 0U;
+    NVIC_DisableIRQ(USART2_IRQn);
+    AS608_PollingReceive = 1;
+    result = AS608_VerifyPassword();
+    AS608_PollingReceive = 0;
+    NVIC_ClearPendingIRQ(USART2_IRQn);
+    if (enabled) NVIC_EnableIRQ(USART2_IRQn);
+    return result;
 }
 
 uint8_t AS608_ReadLibraryInfo(uint16_t *capacity, uint16_t *count)
@@ -550,4 +588,60 @@ uint8_t Finger_Delete(uint16_t id)
 uint8_t AS608_DeleteChar(uint16_t id)
 {
     return Finger_Delete(id);
+}
+
+uint8_t AS608_IDOccupied(uint16_t id, uint8_t *occupied)
+{
+    uint8_t ack, page = (uint8_t)(id / 256U);
+    if (!occupied || !AS608_Capacity || id >= AS608_Capacity) return AS608_ERR_RECV;
+    *occupied = 0;
+    ack = AS608_Command(0x1F, &page, 1);
+    if (ack != AS608_OK) return ack;
+    if (AS608_AckLength() < 35U) return AS608_ERR_RECV;
+    *occupied = (AS608_RxBuffer[10U + (id % 256U) / 8U] >> (id % 8U)) & 1U;
+    return AS608_OK;
+}
+
+uint8_t AS608_CaptureOnce(uint8_t buffer_number)
+{
+    uint8_t ack;
+    if (buffer_number != 1U && buffer_number != 2U) return AS608_ERR_RECV;
+    if (AS608_IsCancelled()) return AS608_ERR_CANCELLED;
+    ack = AS608_Command(0x01, 0, 0);
+    if (ack != AS608_OK) return ack;
+    return AS608_Command(0x02, &buffer_number, 1);
+}
+
+uint8_t AS608_CheckRemoved(void)
+{
+    uint8_t ack = AS608_Command(0x01, 0, 0);
+    return ack == AS608_ERR_NO_FINGER ? AS608_OK : ack == AS608_OK ? AS608_ERR_FINGER_PRESENT : ack;
+}
+
+uint8_t AS608_SearchBuffer(uint8_t buffer_number, uint16_t *id, uint16_t *score)
+{
+    uint8_t ack, param[5] = {1, 0, 0, 0, 0};
+    if (!id || !score || !AS608_Capacity || (buffer_number != 1U && buffer_number != 2U)) return AS608_ERR_RECV;
+    *id = *score = 0;
+    param[0] = buffer_number; param[3] = (uint8_t)(AS608_Capacity >> 8); param[4] = (uint8_t)AS608_Capacity;
+    ack = AS608_Command(0x04, param, 5);
+    if (ack != AS608_OK) return ack;
+    if (AS608_AckLength() < 7U) return AS608_ERR_RECV;
+    *id = (uint16_t)(((uint16_t)AS608_RxBuffer[10] << 8) | AS608_RxBuffer[11]);
+    *score = (uint16_t)(((uint16_t)AS608_RxBuffer[12] << 8) | AS608_RxBuffer[13]);
+    return *id < AS608_Capacity ? AS608_OK : AS608_ERR_RECV;
+}
+
+uint8_t AS608_MergeBuffers(void) { return AS608_Command(0x05, 0, 0); }
+
+uint8_t AS608_StoreBuffer(uint16_t id)
+{
+    uint8_t occupied, ack, param[3] = {1, (uint8_t)(id >> 8), (uint8_t)id};
+    ack = AS608_IDOccupied(id, &occupied);
+    if (ack != AS608_OK) return ack;
+    if (occupied) return AS608_ERR_ID_OCCUPIED;
+    ack = AS608_Command(0x06, param, 3);
+    if (ack != AS608_OK) return ack;
+    ack = AS608_IDOccupied(id, &occupied);
+    return ack != AS608_OK ? ack : occupied ? AS608_OK : AS608_ERR_RECV;
 }

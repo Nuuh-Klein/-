@@ -2,6 +2,61 @@
 #include "OLED_Font.h"
 #include "Delay.h"
 
+static uint8_t oled_frame[8][128];
+
+void OLED_FrameClear(void)
+{
+    uint8_t page, x;
+    for (page = 0; page < 8U; page++) {
+        for (x = 0; x < 128U; x++) oled_frame[page][x] = 0;
+    }
+}
+
+void OLED_DrawPixel(int16_t x, int16_t y, uint8_t on)
+{
+    uint8_t mask;
+    if (x < 0 || x >= 128 || y < 0 || y >= 64) return;
+    mask = (uint8_t)(1U << (y & 7));
+    if (on) oled_frame[y / 8][x] |= mask;
+    else oled_frame[y / 8][x] &= (uint8_t)~mask;
+}
+
+void OLED_DrawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
+{
+    int16_t dx, dy, sx, sy, error, twice;
+    if (x0 < 0 || x0 >= 128 || x1 < 0 || x1 >= 128 ||
+        y0 < 0 || y0 >= 64 || y1 < 0 || y1 >= 64) return;
+    dx = (x1 > x0) ? x1 - x0 : x0 - x1;
+    dy = (y1 > y0) ? y0 - y1 : y1 - y0;
+    sx = (x0 < x1) ? 1 : -1;
+    sy = (y0 < y1) ? 1 : -1;
+    error = dx + dy;
+    for (;;) {
+        OLED_DrawPixel(x0, y0, 1);
+        if (x0 == x1 && y0 == y1) break;
+        twice = error * 2;
+        if (twice >= dy) { error += dy; x0 += sx; }
+        if (twice <= dx) { error += dx; y0 += sy; }
+    }
+}
+
+void OLED_DrawText(uint8_t x, uint8_t y, const char *text)
+{
+    uint8_t column, row, bits;
+    char c;
+    if (text == 0 || y > 48U || x > 120U) return;
+    while ((c = *text++) != '\0' && x <= 120U) {
+        if (c < ' ' || c > '~') c = '?';
+        for (column = 0; column < 8U; column++) {
+            for (row = 0; row < 16U; row++) {
+                bits = OLED_F8x16[c - ' '][column + (row / 8U) * 8U];
+                OLED_DrawPixel(x + column, y + row, (uint8_t)(bits & (1U << (row & 7U))));
+            }
+        }
+        x += 8U;
+    }
+}
+
 /*引脚配置*/
 #define OLED_W_SCL(x)		GPIO_WriteBit(GPIOB, GPIO_Pin_8, (BitAction)(x))
 #define OLED_W_SDA(x)		GPIO_WriteBit(GPIOB, GPIO_Pin_9, (BitAction)(x))
@@ -105,6 +160,20 @@ void OLED_SetCursor(uint8_t Y, uint8_t X)
 	OLED_WriteCommand(0xB0 | Y);					//设置Y位置
 	OLED_WriteCommand(0x10 | ((X & 0xF0) >> 4));	//设置X位置高4位
 	OLED_WriteCommand(0x00 | (X & 0x0F));			//设置X位置低4位
+}
+
+void OLED_FrameShow(void)
+{
+    uint8_t page, x;
+    for (page = 0; page < 8U; page++) {
+        OLED_SetCursor(page, 0);
+        /* One I2C transaction per page, instead of one per byte. */
+        OLED_I2C_Start();
+        OLED_I2C_SendByte(0x78);
+        OLED_I2C_SendByte(0x40);
+        for (x = 0; x < 128U; x++) OLED_I2C_SendByte(oled_frame[page][x]);
+        OLED_I2C_Stop();
+    }
 }
 
 /**

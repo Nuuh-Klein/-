@@ -1,6 +1,11 @@
 #include "stm32f10x.h"  
 #include "Delay.h"  // Device header
 #include "config.h"
+void Buzzer_SetActive(uint8_t active)
+{
+    if (active) GPIO_ResetBits(BUZZER_GPIO_PORT, BUZZER_GPIO_PIN);
+    else GPIO_SetBits(BUZZER_GPIO_PORT, BUZZER_GPIO_PIN);
+}
 
 void Buzzer_Init(void) //初始化蜂鸣器 GPIO；当前驱动按低电平鸣叫配置。
 {

@@ -37,6 +37,7 @@ uint32_t __get_PRIMASK(void);
 void __disable_irq(void);
 void __enable_irq(void);
 void NVIC_DisableIRQ(unsigned);
+void NVIC_EnableIRQ(unsigned);
 void NVIC_ClearPendingIRQ(unsigned);
 #define USART2_IRQn 38U
 typedef struct {uint32_t CTRL, LOAD, VAL;} SysTick_Type;
@@ -46,9 +47,18 @@ extern SysTick_Type mock_systick;
 #define SysTick_CTRL_ENABLE_Msk 1U
 #define SysTick_CTRL_COUNTFLAG_Msk (1U<<16)
 extern uint32_t SystemCoreClock;
-typedef struct {uint32_t SR, BRR;} USART_TypeDef;
+typedef struct {uint32_t SR, BRR, CR1, CR2;} USART_TypeDef;
 extern USART_TypeDef usart2;
 #define USART2 (&usart2)
+typedef struct {uint32_t MAPR;} AFIO_TypeDef;
+typedef struct {uint32_t ISER[2]; uint8_t IP[64];} NVIC_TypeDef;
+typedef struct {uint32_t AIRCR;} SCB_TypeDef;
+extern AFIO_TypeDef mock_afio;
+extern NVIC_TypeDef mock_nvic;
+extern SCB_TypeDef mock_scb;
+#define AFIO (&mock_afio)
+#define NVIC (&mock_nvic)
+#define SCB (&mock_scb)
 #define USART_FLAG_TXE 128U
 #define USART_FLAG_RXNE 32U
 #define USART_FLAG_TC 64U
@@ -92,6 +102,9 @@ PROTOCOL_TEST = r"""
 GPIO_TypeDef gpio_a,gpio_b,gpio_c;
 SysTick_Type mock_systick;
 USART_TypeDef usart2;
+AFIO_TypeDef mock_afio;
+NVIC_TypeDef mock_nvic;
+SCB_TypeDef mock_scb;
 uint32_t SystemCoreClock=72000000;
 static uint8_t tx[80],rx[100],bitmap[8192];
 static unsigned tx_n,rx_n,rx_pos,capacity=300,count=2,stored=9999,gen_n,store_calls;
@@ -99,6 +112,7 @@ static unsigned short_reply,bad_checksum,silent,index_error,cancel_at,cancel_n,s
 static unsigned serial_baud,serial_stop,required_baud,required_stop,required_address;
 static unsigned tx_block,tc_block,inject_error,password_error;
 static unsigned auto_mode,auto_cancel_calls;
+static unsigned manual_mode,manual_present,manual_match,manual_merge_error;
 static unsigned irq_mask,irq_enabled,uart_irq,dispatching;
 void USART2_IRQHandler(void);
 static void dispatch_rx(void) {
@@ -115,11 +129,12 @@ static void dispatch_rx(void) {
 uint32_t __get_PRIMASK(void){return irq_mask;}
 void __disable_irq(void){irq_mask=1;}
 void __enable_irq(void){irq_mask=0;dispatch_rx();mock_systick.CTRL|=SysTick_CTRL_COUNTFLAG_Msk;}
-void NVIC_DisableIRQ(unsigned irq){assert(irq==USART2_IRQn);irq_enabled=0;}
+void NVIC_DisableIRQ(unsigned irq){assert(irq==USART2_IRQn);irq_enabled=0;mock_nvic.ISER[1]&=~(1U<<6);}
+void NVIC_EnableIRQ(unsigned irq){assert(irq==USART2_IRQn);irq_enabled=1;mock_nvic.ISER[1]|=1U<<6;dispatch_rx();}
 void NVIC_ClearPendingIRQ(unsigned irq){assert(irq==USART2_IRQn);}
 void NVIC_Init(NVIC_InitTypeDef *cfg){
     assert(cfg->NVIC_IRQChannel==USART2_IRQn && cfg->NVIC_IRQChannelCmd==ENABLE);
-    irq_enabled=1;dispatch_rx();
+    irq_enabled=1;mock_nvic.ISER[1]|=1U<<6;dispatch_rx();
 }
 void USART_ITConfig(USART_TypeDef *u,uint16_t it,FunctionalState enable){
     assert(u==USART2 && (it==USART_IT_RXNE || it==USART_IT_ERR));
@@ -152,9 +167,9 @@ static void command(void) {
         uint8_t data[2]={count>>8,count};reply(0,data,2);
     } else if(cmd==0x1F) {
         if(index_error) reply(0x1A,0,0);
-        else reply(0,bitmap+(unsigned)tx[10]*32U,32);
+        else reply(0,bitmap+(unsigned)tx[10]*32U,short_reply?0:32);
     } else if(cmd==0x01) {
-        gen_n++;reply(gen_n==2?AS608_ERR_NO_FINGER:0,0,0);
+        gen_n++;reply(manual_mode ? (manual_present ? 0 : AS608_ERR_NO_FINGER) : gen_n==2?AS608_ERR_NO_FINGER:0,0,0);
     } else if(cmd==0x06) {
         stored=((unsigned)tx[11]<<8)|tx[12];store_calls++;
         assert(stored<capacity && !(bitmap[stored/8]&(1U<<(stored%8))));
@@ -162,7 +177,9 @@ static void command(void) {
     } else if(cmd==0x04) {
         assert(tx[10]==1 && tx[11]==0 && tx[12]==0);
         assert((((unsigned)tx[13]<<8)|tx[14])==capacity);
-        uint8_t data[]={0,2,0,88};reply(0,data,4);
+        uint8_t data[]={0,2,0,88};reply(manual_mode && !manual_match ? AS608_ERR_NO_MATCH : 0,data,short_reply?0:4);
+    } else if(cmd==0x05) {
+        reply(manual_mode && manual_merge_error ? AS608_ERR_MERGE : 0,0,0);
     } else if(cmd==0x31) {
         assert(tx_n==17 && tx[8]==8 && tx[12]==2 && tx[13]==0 && tx[14]==0x11);
         uint16_t id=((unsigned)tx[10]<<8)|tx[11];
@@ -218,7 +235,7 @@ void USART_Cmd(USART_TypeDef *u,FunctionalState s){(void)u;(void)s;}
 FlagStatus USART_GetFlagStatus(USART_TypeDef *u,uint16_t flag) {
     assert(u==USART2);if(flag==USART_FLAG_TXE) return tx_block?RESET:SET;
     if(flag==USART_FLAG_TC) return tc_block?RESET:SET;
-    if(rx_pos<rx_n) {if(inject_error){u->SR|=inject_error;inject_error=0;}return SET;}
+    if(rx_pos<rx_n) {u->SR|=USART_SR_RXNE;if(inject_error){u->SR|=inject_error;inject_error=0;}return SET;}
     mock_systick.CTRL|=SysTick_CTRL_COUNTFLAG_Msk;return RESET;
 }
 void USART_SendData(USART_TypeDef *u,uint16_t data) {
@@ -314,6 +331,46 @@ int main(void){
 }
 """
 
+MANUAL_TEST = PROTOCOL_TEST.split("int main(void) {")[0] + r"""
+int main(void) {
+    uint16_t capacity_out,n,id,score;
+    uint8_t occupied;
+    (void)cancelled;(void)progress;
+    AS608_Init();manual_mode=1;bitmap[0]=3;
+    assert(AS608_VerifyPasswordPolled()==0 && irq_enabled && AS608_LastDiag.rx_bytes==12);
+    NVIC_DisableIRQ(USART2_IRQn);
+    assert(AS608_VerifyPasswordPolled()==0 && !irq_enabled && AS608_LastDiag.rx_bytes==12);
+    NVIC_EnableIRQ(USART2_IRQn);
+    silent=1;assert(AS608_VerifyPasswordPolled()==AS608_ERR_TIMEOUT && irq_enabled && !AS608_LastDiag.rx_bytes);silent=0;
+    assert(AS608_ReadLibraryInfo(&capacity_out,&n)==0);
+    assert(AS608_IDOccupied(0,&occupied)==0 && occupied);
+    assert(AS608_IDOccupied(2,&occupied)==0 && !occupied);
+    assert(AS608_IDOccupied(300,&occupied)==AS608_ERR_RECV);
+    assert(AS608_CaptureOnce(1)==AS608_ERR_NO_FINGER);
+    manual_present=1;assert(AS608_CaptureOnce(1)==0);
+    manual_match=1;assert(AS608_SearchBuffer(1,&id,&score)==0 && id==2 && score==88);
+    manual_match=0;assert(AS608_SearchBuffer(1,&id,&score)==AS608_ERR_NO_MATCH && !id && !score);
+    assert(AS608_CheckRemoved()==AS608_ERR_FINGER_PRESENT);
+    manual_present=0;assert(AS608_CheckRemoved()==0);
+    manual_present=1;assert(AS608_CaptureOnce(2)==0);
+    AS608_HardwareState state;
+    usart2.CR1=0x202C;usart2.CR2=0x2000;gpio_a.CRL=0x8B00;
+    mock_nvic.ISER[1]=1U<<6;mock_nvic.IP[38]=0x40;mock_scb.AIRCR=0x500;
+    unsigned sent=command_n;AS608_GetHardwareState(&state);
+    assert(state.brr==625 && state.cr1==0x202C && state.cr2==0x2000 && state.gpio_modes==0x8B);
+    assert(state.irq_enabled && !state.irq_masked && !state.remapped && state.priority_group==5 && state.irq_priority==0x40 && command_n==sent);
+    manual_merge_error=1;assert(AS608_MergeBuffers()==AS608_ERR_MERGE);
+    manual_merge_error=0;assert(AS608_MergeBuffers()==0);
+    assert(AS608_StoreBuffer(2)==0 && store_calls==1 && stored==2);
+    assert(AS608_StoreBuffer(2)==AS608_ERR_ID_OCCUPIED && store_calls==1);
+    short_reply=1;assert(AS608_IDOccupied(2,&occupied)==AS608_ERR_RECV);
+    manual_match=1;assert(AS608_SearchBuffer(1,&id,&score)==AS608_ERR_RECV && !id && !score);
+    assert(AS608_CaptureOnce(0)==AS608_ERR_RECV);
+    puts("PASS: real UART manual fingerprint capture/removal/duplicate search/merge/store frames, occupied-ID protection and short ACK rejection");
+    return 0;
+}
+"""
+
 def main():
     gcc = shutil.which("gcc")
     if not gcc:
@@ -323,11 +380,13 @@ def main():
     with tempfile.TemporaryDirectory(prefix="host-extended-", dir=build_root) as directory:
         temp = Path(directory)
         pins = "\n".join(f"#define GPIO_Pin_{i} (1U << {i})" for i in range(16))
-        (temp / "stm32f10x.h").write_text(STUB.replace("#endif", EXTRA + pins + "\n#endif"))
+        header = STUB.replace("uint16_t output; }", "uint16_t output; uint32_t CRL; }")
+        (temp / "stm32f10x.h").write_text(header.replace("#endif", EXTRA + pins + "\n#endif"))
         for name in ("rcc", "gpio", "usart", "flash"):
             (temp / f"stm32f10x_{name}.h").write_text('#include "stm32f10x.h"\n')
         targets = [("as608", PROTOCOL_TEST, "AS608.c"),
-                   ("jm101", JM101_TEST, "AS608.c")]
+                   ("jm101", JM101_TEST, "AS608.c"),
+                   ("manual", MANUAL_TEST, "AS608.c")]
         for name, source, driver in targets:
             harness = temp / f"{name}.c"
             harness.write_text(source)

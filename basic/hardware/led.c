@@ -9,6 +9,8 @@ LED_Red_Off();
 void LED_Init(void)
 {
 	RCC_APB2PeriphClockCmd(LED_RCC_PORT, ENABLE);
+	/* Preload the inactive (low) level before enabling output mode. */
+	LED_Alloff();
 	GPIO_InitTypeDef 
     GPIO_InitStructure;
 	GPIO_InitStructure.GPIO_Mode=GPIO_Mode_Out_PP;
@@ -19,17 +21,17 @@ void LED_Init(void)
 }
 void LED_Green_On(void)
 {
-	GPIO_ResetBits(LED_Green_PORT,LED_Green_Pin);
+	GPIO_SetBits(LED_Green_PORT,LED_Green_Pin);
 	}
 void LED_Green_Off(void)
 {
-	GPIO_SetBits(LED_Green_PORT,LED_Green_Pin);
+	GPIO_ResetBits(LED_Green_PORT,LED_Green_Pin);
 	}
 void LED_Red_On(void)
 {
-	GPIO_ResetBits(LED_Red_PORT,LED_Red_Pin);
+	GPIO_SetBits(LED_Red_PORT,LED_Red_Pin);
 	}
 void LED_Red_Off(void)
 {
-	GPIO_SetBits(LED_Red_PORT,LED_Red_Pin);
+	GPIO_ResetBits(LED_Red_PORT,LED_Red_Pin);
 	}
